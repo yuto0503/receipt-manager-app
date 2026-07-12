@@ -2,10 +2,6 @@
 
 レシートの画像をアップロードして家計簿を自動生成するWebアプリ
 
-# Receipt Management App
-
-レシートを管理するWebアプリです。
-
 ## 技術スタック
 
 ### Frontend
