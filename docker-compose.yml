@@ -37,5 +37,12 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./backend/migrations:/migrations
+    depends_on:
+      - mysql
+
 volumes:
   mysql_data:
