@@ -15,7 +15,7 @@
 
 - Go
 - Echo
-- PostgreSQL
+- mySQL
 
 ### Infrastructure
 
@@ -44,11 +44,11 @@
 
 ## Phase 1 環境構築
 
-- [x] Docker環境構築
-- [x] Frontend構築
-- [x] Backend構築
-- [x] PostgreSQL接続
-- [x] Docker Compose設定
+- [ ] Docker環境構築
+- [ ] Frontend構築
+- [ ] Backend構築
+- [ ] PostgreSQL接続
+- [ ] Docker Compose設定
 
 ---
 
