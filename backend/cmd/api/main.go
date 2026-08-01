@@ -2,10 +2,13 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/database"
+	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/handler"
+	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/repository"
+	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/router"
+	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/service"
 )
 
 func main() {
@@ -19,12 +22,13 @@ func main() {
 	log.Println("DB接続に成功しました。")
 
 	e := echo.New()
+	receiptRepository := repository.NewReceiptRepository(db)
+	receiptService := service.NewReceiptService(receiptRepository)
+	receiptHandler := handler.NewReceiptHandler(receiptService)
 
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{
-			"status": "ok",
-		})
-	})
+	// ルーティングの登録
+	router.SetupRouter(e, receiptHandler)
 
+	// サーバーの起動
 	e.Logger.Fatal(e.Start(":8080"))
 }
