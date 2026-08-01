@@ -15,5 +15,9 @@ func SetupRouter(e *echo.Echo, receiptHandler *handler.ReceiptHandler) {
 		})
 	})
 
+	// 一覧取得
 	e.GET("/receipts", receiptHandler.GetReceipts)
+
+	// 1件取得
+	e.GET("/receipts/:id", receiptHandler.GetReceipts)
 }

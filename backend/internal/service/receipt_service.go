@@ -15,6 +15,12 @@ func NewReceiptService(repository *repository.ReceiptRepository) *ReceiptService
 	}
 }
 
+// 一覧取得
 func (s *ReceiptService) GetReceipts() ([]model.Receipt, error) {
 	return s.repository.GetReceipts()
+}
+
+// 1件取得
+func (s *ReceiptService) GetReceiptByID(id int) (model.Receipt, error) {
+	return s.repository.GetReceiptByID(id)
 }

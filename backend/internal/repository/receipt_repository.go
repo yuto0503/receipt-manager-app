@@ -16,6 +16,7 @@ func NewReceiptRepository(db *sql.DB) *ReceiptRepository {
 	}
 }
 
+// 一覧取得
 func (r *ReceiptRepository) GetReceipts() ([]model.Receipt, error) {
 	rows, err := r.db.Query(`
 		SELECT
@@ -61,4 +62,38 @@ func (r *ReceiptRepository) GetReceipts() ([]model.Receipt, error) {
 	}
 
 	return receipts, nil
+}
+
+// 1件取得
+func (r *ReceiptRepository) GetReceiptByID(id int) (model.Receipt, error) {
+	row := r.db.QueryRow(`
+		SELECT
+			id,
+			store_name,
+			amount,
+			purchase_date,
+			category,
+			memo,
+			created_at,
+			updated_at
+		FROM receipts
+		WHERE id = ?
+	`, id)
+
+	var receipt model.Receipt
+
+	if err := row.Scan(
+		&receipt.ID,
+		&receipt.StoreName,
+		&receipt.Amount,
+		&receipt.PurchaseDate,
+		&receipt.Category,
+		&receipt.Memo,
+		&receipt.CreatedAt,
+		&receipt.UpdatedAt,
+	); err != nil {
+		return model.Receipt{}, err
+	}
+
+	return receipt, nil
 }
