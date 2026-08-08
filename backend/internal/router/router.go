@@ -22,4 +22,9 @@ func SetupRouter(e *echo.Echo, receiptHandler *handler.ReceiptHandler) {
 	// 1件取得
 	e.GET("/receipts/:id", receiptHandler.GetReceipts)
 
+	// 登録API
+	e.POST("/receipts", receiptHandler.CreateReceipt)
+
+	// 更新API
+	e.PUT("/receipts/:id", receiptHandler.UpdateReceipt)
 }
