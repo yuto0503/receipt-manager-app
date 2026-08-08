@@ -24,3 +24,13 @@ func (s *ReceiptService) GetReceipts() ([]model.Receipt, error) {
 func (s *ReceiptService) GetReceiptByID(id int) (model.Receipt, error) {
 	return s.repository.GetReceiptByID(id)
 }
+
+// 登録API
+func (s *ReceiptService) CreateReceipt(receipt model.Receipt) (model.Receipt, error) {
+	return s.repository.CreateReceipt(receipt)
+}
+
+// 更新API
+func (s *ReceiptService) UpdateReceipt(receipt model.Receipt) (model.Receipt, error) {
+	return s.repository.UpdateReceipt(receipt)
+}

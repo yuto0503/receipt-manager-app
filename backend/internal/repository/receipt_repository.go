@@ -2,9 +2,12 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/model"
 )
+
+var ErrReceiptNotFound = errors.New("レシートが存在しません")
 
 type ReceiptRepository struct {
 	db *sql.DB
@@ -96,4 +99,69 @@ func (r *ReceiptRepository) GetReceiptByID(id int) (model.Receipt, error) {
 	}
 
 	return receipt, nil
+}
+
+// 登録API
+func (r *ReceiptRepository) CreateReceipt(receipt model.Receipt) (model.Receipt, error) {
+	result, err := r.db.Exec(`
+	INSERT INTO receipts (
+		store_name,
+	  amount,
+    purchase_date,
+    category,
+    memo
+	)
+		VALUES (?, ?, ?, ?, ?)
+	`,
+		receipt.StoreName,
+		receipt.Amount,
+		receipt.PurchaseDate,
+		receipt.Category,
+		receipt.Memo,
+	)
+	if err != nil {
+		return model.Receipt{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return model.Receipt{}, err
+	}
+
+	return r.GetReceiptByID(int(id))
+}
+
+// 更新API
+func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt, error) {
+	result, err := r.db.Exec(`
+	UPDATE receipts 
+	SET 
+		store_name = ?,
+		amount = ?, 
+		purchase_date = ?, 
+		category = ?, 
+		memo = ?
+	WHERE id = ?
+	`,
+		receipt.StoreName,
+		receipt.Amount,
+		receipt.PurchaseDate,
+		receipt.Category,
+		receipt.Memo,
+		receipt.ID,
+	)
+	if err != nil {
+		return model.Receipt{}, err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return model.Receipt{}, err
+	}
+
+	if affected == 0 {
+		return model.Receipt{}, ErrReceiptNotFound
+	}
+
+	return r.GetReceiptByID(receipt.ID)
 }
