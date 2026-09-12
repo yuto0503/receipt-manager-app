@@ -54,3 +54,8 @@ yarn-error.log*
 # -------------------------
 !backend/.env.example
 !frontend/.env.example
+
+# -------------------------
+# other
+# -------------------------
+local_docs
