@@ -5,7 +5,7 @@ import "time"
 type Receipt struct {
 	ID           int       `json:"id"`
 	StoreName    string    `json:"store_name"`
-	Amount       int       `json:"amount"`
+	Price        int       `json:"price"`
 	PurchaseDate time.Time `json:"purchase_date"`
 	Category     string    `json:"category"`
 	Memo         string    `json:"memo"`

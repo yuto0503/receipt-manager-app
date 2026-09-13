@@ -4,7 +4,7 @@ export default function ReceiptList() {
   type Receipt = {
     id: number;
     store_name: string;
-    amount: number;
+    price: number;
     purchase_date: string;
     category: string;
     memo: string;
