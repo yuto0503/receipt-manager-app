@@ -25,7 +25,7 @@ func (r *ReceiptRepository) GetReceipts() ([]model.Receipt, error) {
 		SELECT
 			id,
 			store_name,
-			amount,
+			price,
 			purchase_date,
 			category,
 			memo,
@@ -47,7 +47,7 @@ func (r *ReceiptRepository) GetReceipts() ([]model.Receipt, error) {
 		if err := rows.Scan(
 			&receipt.ID,
 			&receipt.StoreName,
-			&receipt.Amount,
+			&receipt.Price,
 			&receipt.PurchaseDate,
 			&receipt.Category,
 			&receipt.Memo,
@@ -73,7 +73,7 @@ func (r *ReceiptRepository) GetReceiptByID(id int) (model.Receipt, error) {
 		SELECT
 			id,
 			store_name,
-			amount,
+			price,
 			purchase_date,
 			category,
 			memo,
@@ -88,7 +88,7 @@ func (r *ReceiptRepository) GetReceiptByID(id int) (model.Receipt, error) {
 	if err := row.Scan(
 		&receipt.ID,
 		&receipt.StoreName,
-		&receipt.Amount,
+		&receipt.Price,
 		&receipt.PurchaseDate,
 		&receipt.Category,
 		&receipt.Memo,
@@ -106,7 +106,7 @@ func (r *ReceiptRepository) CreateReceipt(receipt model.Receipt) (model.Receipt,
 	result, err := r.db.Exec(`
 	INSERT INTO receipts (
 		store_name,
-	  amount,
+	  price,
     purchase_date,
     category,
     memo
@@ -114,7 +114,7 @@ func (r *ReceiptRepository) CreateReceipt(receipt model.Receipt) (model.Receipt,
 		VALUES (?, ?, ?, ?, ?)
 	`,
 		receipt.StoreName,
-		receipt.Amount,
+		receipt.Price,
 		receipt.PurchaseDate,
 		receipt.Category,
 		receipt.Memo,
@@ -137,14 +137,14 @@ func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt,
 	UPDATE receipts 
 	SET 
 		store_name = ?,
-		amount = ?, 
+		price = ?,
 		purchase_date = ?, 
 		category = ?, 
 		memo = ?
 	WHERE id = ?
 	`,
 		receipt.StoreName,
-		receipt.Amount,
+		receipt.Price,
 		receipt.PurchaseDate,
 		receipt.Category,
 		receipt.Memo,

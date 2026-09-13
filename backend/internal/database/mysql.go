@@ -28,8 +28,6 @@ func Connect() (*sql.DB, error) {
 		dbName,
 	)
 
-	log.Println(dsn)
-
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
