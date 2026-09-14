@@ -1,7 +1,9 @@
 package model
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -10,6 +12,14 @@ const (
 	CategoryMaxLength  = 100
 	MemoMaxLength      = 2000
 )
+
+// Validate checks the shared input rules for creating and updating receipts.
+func (r Receipt) Validate() error {
+	if strings.TrimSpace(r.StoreName) == "" {
+		return errors.New("店名を入力してください。空白のみの入力はできません。")
+	}
+	return r.ValidateTextLengths()
+}
 
 // ValidateTextLengths counts Unicode code points, rather than UTF-8 bytes.
 func (r Receipt) ValidateTextLengths() error {

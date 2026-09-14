@@ -28,3 +28,20 @@ func TestValidateTextLengths(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateStoreName(t *testing.T) {
+	for _, name := range []string{"", " ", "　", "\t\r\n", " \t　\n"} {
+		if err := (Receipt{StoreName: name}).Validate(); err == nil {
+			t.Errorf("expected rejection for %q", name)
+		}
+	}
+	for _, name := range []string{"店舗", " 店舗　", "東京 支店"} {
+		r := Receipt{StoreName: name}
+		if err := r.Validate(); err != nil {
+			t.Errorf("unexpected rejection for %q: %v", name, err)
+		}
+		if r.StoreName != name {
+			t.Errorf("store name was modified: %q", r.StoreName)
+		}
+	}
+}

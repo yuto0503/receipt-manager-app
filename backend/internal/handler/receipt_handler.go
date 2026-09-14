@@ -67,7 +67,7 @@ func (h *ReceiptHandler) CreateReceipt(c echo.Context) error {
 			},
 		)
 	}
-	if err := receipt.ValidateTextLengths(); err != nil {
+	if err := receipt.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	createdReceipt, err := h.service.CreateReceipt(receipt)
@@ -96,7 +96,7 @@ func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
 			},
 		)
 	}
-	if err := receipt.ValidateTextLengths(); err != nil {
+	if err := receipt.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	updatedReceipt, err := h.service.UpdateReceipt(receipt)

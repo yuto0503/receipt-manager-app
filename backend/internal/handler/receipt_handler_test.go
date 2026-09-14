@@ -53,3 +53,38 @@ func TestReceiptTextLengthRejection(t *testing.T) {
 		}
 	}
 }
+
+func TestReceiptBlankStoreNameRejection(t *testing.T) {
+	// No service is provided: reaching persistence would fail the test.
+	h := NewReceiptHandler(nil)
+	for _, method := range []string{http.MethodPost, http.MethodPut} {
+		for _, body := range []string{
+			`{"store_name":""}`, `{"store_name":"   "}`,
+			`{"store_name":"　"}`, `{"store_name":"\t\r\n"}`,
+			`{"store_name":" \t　\n"}`, `{}`, `{"store_name":null}`,
+		} {
+			t.Run(method+"/"+body, func(t *testing.T) {
+				req := httptest.NewRequest(method, "/receipts/1", strings.NewReader(body))
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+				rec := httptest.NewRecorder()
+				c := echo.New().NewContext(req, rec)
+				var err error
+				if method == http.MethodPost {
+					err = h.CreateReceipt(c)
+				} else {
+					err = h.UpdateReceipt(c)
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				var response map[string]string
+				if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+					t.Fatal(err)
+				}
+				if rec.Code != http.StatusBadRequest || response["message"] != "店名を入力してください。空白のみの入力はできません。" {
+					t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+				}
+			})
+		}
+	}
+}
