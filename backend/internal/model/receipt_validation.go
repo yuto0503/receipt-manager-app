@@ -28,6 +28,9 @@ func (r Receipt) Validate() error {
 	if r.PurchaseDate.Year() < 1000 || r.PurchaseDate.Year() > 9999 {
 		return errors.New("購入日は1000年から9999年の範囲で入力してください。")
 	}
+	if strings.TrimSpace(r.Category) == "" {
+		return errors.New("カテゴリを入力してください。空白のみの入力はできません。")
+	}
 	return r.ValidateTextLengths()
 }
 

@@ -115,7 +115,7 @@ func TestBindReceiptValidPurchaseDate(t *testing.T) {
 	for _, method := range []string{http.MethodPost, http.MethodPut} {
 		for _, value := range []string{"2024-02-29T00:00:00Z", "2026-09-21T12:34:56+09:00", "2026-09-21T12:34:56-05:30", "2026-09-21T12:34:56.123456789Z", "1000-01-01T00:00:00Z", "9999-12-31T23:59:59Z"} {
 			t.Run(method+"/"+value, func(t *testing.T) {
-				body := `{"store_name":"店舗","price":0,"purchase_date":"` + value + `"}`
+				body := `{"store_name":"店舗","category":"食費","price":0,"purchase_date":"` + value + `"}`
 				req := httptest.NewRequest(method, "/receipts/1", strings.NewReader(body))
 				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 				r, err := bindReceipt(echo.New().NewContext(req, httptest.NewRecorder()))

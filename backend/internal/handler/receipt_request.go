@@ -29,11 +29,20 @@ func bindReceipt(c echo.Context) (model.Receipt, error) {
 	var request receiptRequest
 	if err := c.Bind(&request); err != nil {
 		var typeError *json.UnmarshalTypeError
-		if errors.As(err, &typeError) && typeError.Field == "purchase_date" {
-			return model.Receipt{}, errors.New(purchaseDateFormatMessage)
-		}
-		if errors.As(err, &typeError) && typeError.Field == "price" {
-			return model.Receipt{}, fmt.Errorf("金額は0円以上%d円以下の整数で入力してください。", model.PriceMax)
+		if errors.As(err, &typeError) {
+			// 埋め込んだReceiptのフィールド名には型名が付く。
+			switch strings.TrimPrefix(typeError.Field, "Receipt.") {
+			case "store_name":
+				return model.Receipt{}, errors.New("店名は文字列で入力してください。")
+			case "category":
+				return model.Receipt{}, errors.New("カテゴリは文字列で入力してください。")
+			case "memo":
+				return model.Receipt{}, errors.New("メモは文字列で入力してください。")
+			case "purchase_date":
+				return model.Receipt{}, errors.New(purchaseDateFormatMessage)
+			case "price":
+				return model.Receipt{}, fmt.Errorf("金額は0円以上%d円以下の整数で入力してください。", model.PriceMax)
+			}
 		}
 		return model.Receipt{}, errors.New("リクエストが不正です")
 	}
