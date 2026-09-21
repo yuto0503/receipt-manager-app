@@ -64,7 +64,7 @@ func TestReceiptBlankStoreNameRejection(t *testing.T) {
 			`{"price":0,"store_name":" \t　\n"}`, `{"price":0}`, `{"price":0,"store_name":null}`,
 		} {
 			t.Run(method+"/"+body, func(t *testing.T) {
-				req := httptest.NewRequest(method, "/receipts/1", strings.NewReader(body))
+				req := httptest.NewRequest(method, "/receipts/1", strings.NewReader(strings.TrimSuffix(body, "}")+`,"purchase_date":"2026-09-21T00:00:00Z"}`))
 				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 				rec := httptest.NewRecorder()
 				c := echo.New().NewContext(req, rec)

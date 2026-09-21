@@ -3,6 +3,7 @@ package model
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestValidateTextLengths(t *testing.T) {
@@ -36,7 +37,7 @@ func TestValidateStoreName(t *testing.T) {
 		}
 	}
 	for _, name := range []string{"店舗", " 店舗　", "東京 支店"} {
-		r := Receipt{StoreName: name}
+		r := Receipt{StoreName: name, PurchaseDate: time.Date(2026, 9, 21, 0, 0, 0, 0, time.UTC)}
 		if err := r.Validate(); err != nil {
 			t.Errorf("unexpected rejection for %q: %v", name, err)
 		}
