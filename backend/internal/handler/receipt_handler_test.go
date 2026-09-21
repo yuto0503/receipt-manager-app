@@ -59,9 +59,9 @@ func TestReceiptBlankStoreNameRejection(t *testing.T) {
 	h := NewReceiptHandler(nil)
 	for _, method := range []string{http.MethodPost, http.MethodPut} {
 		for _, body := range []string{
-			`{"store_name":""}`, `{"store_name":"   "}`,
-			`{"store_name":"　"}`, `{"store_name":"\t\r\n"}`,
-			`{"store_name":" \t　\n"}`, `{}`, `{"store_name":null}`,
+			`{"price":0,"store_name":""}`, `{"price":0,"store_name":"   "}`,
+			`{"price":0,"store_name":"　"}`, `{"price":0,"store_name":"\t\r\n"}`,
+			`{"price":0,"store_name":" \t　\n"}`, `{"price":0}`, `{"price":0,"store_name":null}`,
 		} {
 			t.Run(method+"/"+body, func(t *testing.T) {
 				req := httptest.NewRequest(method, "/receipts/1", strings.NewReader(body))

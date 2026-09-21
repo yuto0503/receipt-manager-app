@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/model"
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/repository"
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/service"
 )
@@ -57,17 +56,8 @@ func (h *ReceiptHandler) GetReceiptByID(c echo.Context) error {
 
 // 登録API
 func (h *ReceiptHandler) CreateReceipt(c echo.Context) error {
-	var receipt model.Receipt
-
-	if err := c.Bind(&receipt); err != nil {
-		return c.JSON(
-			http.StatusBadRequest,
-			map[string]string{
-				"message": "リクエストが不正です",
-			},
-		)
-	}
-	if err := receipt.Validate(); err != nil {
+	receipt, err := bindReceipt(c)
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	createdReceipt, err := h.service.CreateReceipt(receipt)
@@ -86,17 +76,8 @@ func (h *ReceiptHandler) CreateReceipt(c echo.Context) error {
 
 // 更新API
 func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
-	var receipt model.Receipt
-
-	if err := c.Bind(&receipt); err != nil {
-		return c.JSON(
-			http.StatusBadRequest,
-			map[string]string{
-				"message": "リクエストが不正です",
-			},
-		)
-	}
-	if err := receipt.Validate(); err != nil {
+	receipt, err := bindReceipt(c)
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	updatedReceipt, err := h.service.UpdateReceipt(receipt)

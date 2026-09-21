@@ -11,12 +11,16 @@ const (
 	StoreNameMaxLength = 255
 	CategoryMaxLength  = 100
 	MemoMaxLength      = 2000
+	PriceMax           = 2147483647 // MySQL signed INT maximum.
 )
 
 // Validate checks the shared input rules for creating and updating receipts.
 func (r Receipt) Validate() error {
 	if strings.TrimSpace(r.StoreName) == "" {
 		return errors.New("店名を入力してください。空白のみの入力はできません。")
+	}
+	if r.Price < 0 || r.Price > PriceMax {
+		return fmt.Errorf("金額は0円以上%d円以下の整数で入力してください。", PriceMax)
 	}
 	return r.ValidateTextLengths()
 }
