@@ -20,7 +20,7 @@ func SetupRouter(e *echo.Echo, receiptHandler *handler.ReceiptHandler) {
 	e.GET("/receipts", receiptHandler.GetReceipts)
 
 	// 1件取得
-	e.GET("/receipts/:id", receiptHandler.GetReceipts)
+	e.GET("/receipts/:id", receiptHandler.GetReceiptByID)
 
 	// 登録API
 	e.POST("/receipts", receiptHandler.CreateReceipt)

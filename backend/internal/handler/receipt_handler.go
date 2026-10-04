@@ -38,8 +38,11 @@ func (h *ReceiptHandler) GetReceipts(c echo.Context) error {
 
 // 1件取得
 func (h *ReceiptHandler) GetReceiptByID(c echo.Context) error {
-	// intに変更
+	// IDは1以上の整数のみ受け付ける。
 	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
+	}
 	receipt, err := h.service.GetReceiptByID(id)
 
 	if err != nil {
@@ -80,6 +83,12 @@ func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
+	// 更新対象は本文ではなくURLのIDで指定する。
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
+	}
+	receipt.ID = id
 	updatedReceipt, err := h.service.UpdateReceipt(receipt)
 
 	if err != nil {

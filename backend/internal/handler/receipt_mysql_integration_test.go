@@ -183,9 +183,12 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 			p := payload()
 			tc.edit(p)
 			target = successful(http.MethodPost, p, 0)
-			p["id"] = target.ID
+			// The URL identifies the target even when the body omits the ID.
+			delete(p, "id")
 			p["store_name"] = "更新前"
 			successful(http.MethodPut, p, target.ID)
+			// A conflicting body ID must not redirect the update.
+			p["id"] = target.ID + 1000
 			tc.edit(p)
 			if tc.name != "maximums" && tc.name != "whitespace_preserved" {
 				p["store_name"] = "更新後"
