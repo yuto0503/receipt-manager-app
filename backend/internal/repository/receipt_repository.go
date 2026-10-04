@@ -161,3 +161,19 @@ func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt,
 	}
 	return updatedReceipt, err
 }
+
+// 指定したレシートを物理削除する。
+func (r *ReceiptRepository) DeleteReceipt(id int) error {
+	result, err := r.db.Exec("DELETE FROM receipts WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrReceiptNotFound
+	}
+	return nil
+}

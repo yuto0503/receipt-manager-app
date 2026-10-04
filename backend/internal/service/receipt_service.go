@@ -34,3 +34,8 @@ func (s *ReceiptService) CreateReceipt(receipt model.Receipt) (model.Receipt, er
 func (s *ReceiptService) UpdateReceipt(receipt model.Receipt) (model.Receipt, error) {
 	return s.repository.UpdateReceipt(receipt)
 }
+
+// 削除API
+func (s *ReceiptService) DeleteReceipt(id int) error {
+	return s.repository.DeleteReceipt(id)
+}

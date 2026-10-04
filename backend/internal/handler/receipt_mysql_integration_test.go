@@ -88,7 +88,7 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 	}
 	request := func(method, body, contentType string, id int) *httptest.ResponseRecorder {
 		path := "/receipts"
-		if method == http.MethodPut {
+		if method == http.MethodPut || method == http.MethodDelete || (method == http.MethodGet && id != 0) {
 			path += fmt.Sprintf("/%d", id)
 		}
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
@@ -305,6 +305,40 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 		}
 		if !reflect.DeepEqual(before, snapshot()) {
 			t.Fatal("body ID redirected update when URL target was missing")
+		}
+	})
+	t.Run("delete_outcomes", func(t *testing.T) {
+		created := successful(http.MethodPost, payload(), 0)
+		before := snapshot()
+		want := make([]model.Receipt, 0, len(before)-1)
+		for _, receipt := range before {
+			if receipt.ID != created.ID {
+				want = append(want, receipt)
+			}
+		}
+		rec := request(http.MethodDelete, "", "", created.ID)
+		if rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
+			t.Fatalf("delete: status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		if !reflect.DeepEqual(snapshot(), want) {
+			t.Fatal("delete did not remove only the target row")
+		}
+		checkList(t, want)
+		for _, tc := range []struct {
+			method string
+			id     int
+		}{
+			{http.MethodGet, created.ID},
+			{http.MethodDelete, created.ID},
+			{http.MethodDelete, created.ID + 1000},
+		} {
+			rec := request(tc.method, "", "", tc.id)
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("%s/%d: status=%d body=%s", tc.method, tc.id, rec.Code, rec.Body.String())
+			}
+		}
+		if !reflect.DeepEqual(snapshot(), want) {
+			t.Fatal("requests for missing receipts changed other rows")
 		}
 	})
 	type invalidCase struct{ name, body, contentType string }

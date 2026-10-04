@@ -115,3 +115,18 @@ func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, updatedReceipt)
 }
+
+// 削除API
+func (h *ReceiptHandler) DeleteReceipt(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
+	}
+	if err := h.service.DeleteReceipt(id); err != nil {
+		if errors.Is(err, repository.ErrReceiptNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "レシートが存在しません。"})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "レシートの削除に失敗しました。"})
+	}
+	return c.NoContent(http.StatusNoContent)
+}

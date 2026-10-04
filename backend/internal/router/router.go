@@ -27,4 +27,7 @@ func SetupRouter(e *echo.Echo, receiptHandler *handler.ReceiptHandler) {
 
 	// 更新API
 	e.PUT("/receipts/:id", receiptHandler.UpdateReceipt)
+
+	// 削除API
+	e.DELETE("/receipts/:id", receiptHandler.DeleteReceipt)
 }

@@ -14,7 +14,7 @@ func TestReceiptRoutesRejectInvalidURLID(t *testing.T) {
 	e := echo.New()
 	// Invalid IDs must be rejected before accessing the service.
 	SetupRouter(e, handler.NewReceiptHandler(nil))
-	for _, method := range []string{http.MethodGet, http.MethodPut} {
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
 		for _, id := range []string{"abc", "0", "-1", "1.5", "999999999999999999999999999999"} {
 			t.Run(method+"/"+id, func(t *testing.T) {
 				body := `{"id":1,"store_name":"店舗","price":100,"purchase_date":"2026-10-04T00:00:00+09:00","category":"食費"}`
