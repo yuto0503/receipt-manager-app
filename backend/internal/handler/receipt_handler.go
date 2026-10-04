@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 	"strconv"
@@ -46,6 +47,9 @@ func (h *ReceiptHandler) GetReceiptByID(c echo.Context) error {
 	receipt, err := h.service.GetReceiptByID(id)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "レシートが存在しません。"})
+		}
 		return c.JSON(
 			http.StatusInternalServerError,
 			map[string]string{
