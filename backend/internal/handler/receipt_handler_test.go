@@ -11,7 +11,7 @@ import (
 )
 
 func TestReceiptTextLengthRejection(t *testing.T) {
-	// A nil service ensures invalid input is rejected before any DB access.
+	// サービスをnilにし、DBへアクセスする前に不正な入力が拒否されることを確認する。
 	h := NewReceiptHandler(nil)
 	for _, method := range []string{http.MethodPost, http.MethodPut} {
 		for _, tc := range []struct {
@@ -55,7 +55,7 @@ func TestReceiptTextLengthRejection(t *testing.T) {
 }
 
 func TestReceiptBlankStoreNameRejection(t *testing.T) {
-	// No service is provided: reaching persistence would fail the test.
+	// サービスを渡さず、永続化処理に到達するとテストが失敗するようにする。
 	h := NewReceiptHandler(nil)
 	for _, method := range []string{http.MethodPost, http.MethodPut} {
 		for _, body := range []string{

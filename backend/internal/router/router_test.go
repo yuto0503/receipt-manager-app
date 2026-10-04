@@ -12,7 +12,7 @@ import (
 
 func TestReceiptRoutesRejectInvalidURLID(t *testing.T) {
 	e := echo.New()
-	// Invalid IDs must be rejected before accessing the service.
+	// サービスにアクセスする前に、不正なIDを拒否する必要がある。
 	SetupRouter(e, handler.NewReceiptHandler(nil))
 	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
 		for _, id := range []string{"abc", "0", "-1", "1.5", "999999999999999999999999999999"} {

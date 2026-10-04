@@ -15,8 +15,8 @@ import (
 )
 
 func TestCreateReceiptDatabaseFailure(t *testing.T) {
-	// Close a lazily opened pool to force a real database/sql error without
-	// connecting to or changing an existing database.
+	// 遅延接続するプールを閉じ、既存のデータベースに接続したり変更したりせずに、
+	// database/sqlの実際のエラーを発生させる。
 	db, err := sql.Open("mysql", "")
 	if err != nil {
 		t.Fatal(err)

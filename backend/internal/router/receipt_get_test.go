@@ -21,7 +21,7 @@ import (
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/service"
 )
 
-// Exercise the real Router, Handler, Service and Repository with controlled SQL results.
+// SQLの結果を制御し、実際のRouter、Handler、Service、Repositoryを通して検証する。
 func TestGetReceiptByID(t *testing.T) {
 	date := time.Date(2026, 10, 4, 0, 0, 0, 0, time.UTC)
 	want := model.Receipt{ID: 123, StoreName: "店舗", Price: 500, PurchaseDate: date, Category: "食費", Memo: "メモ", CreatedAt: date, UpdatedAt: date}
@@ -52,7 +52,7 @@ func TestGetReceiptByID(t *testing.T) {
 			}
 			if tc.status == http.StatusOK {
 				var got model.Receipt
-				// Decoding into a struct also rejects an array response.
+				// 構造体へデコードすることで、配列のレスポンスも拒否する。
 				if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 					t.Fatal(err)
 				}

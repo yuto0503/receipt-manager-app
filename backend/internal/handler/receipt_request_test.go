@@ -13,7 +13,7 @@ import (
 )
 
 func TestReceiptPriceRejection(t *testing.T) {
-	h := NewReceiptHandler(nil) // Invalid input must never reach the service/DB.
+	h := NewReceiptHandler(nil) // 不正な入力がサービスやDBに到達してはならない。
 	for _, method := range []string{http.MethodPost, http.MethodPut} {
 		for _, price := range []string{"", "null", "-1", "2147483648", "9223372036854775808", "1.5", `"100"`, "true", "[]", "{}"} {
 			t.Run(method+"/"+price, func(t *testing.T) {

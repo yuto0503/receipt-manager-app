@@ -23,9 +23,9 @@ import (
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/service"
 )
 
-// Opt in with RECEIPT_TEST_MYSQL_DSN. A connection-local temporary table shadows
-// receipts, so existing application rows are never modified. Do not parallelize:
-// all SQL must use the single connection that owns the temporary table.
+// RECEIPT_TEST_MYSQL_DSNを設定すると実行する。接続内だけで有効な一時テーブルで
+// receiptsを隠すため、既存のアプリケーションの行は変更されない。並列実行は禁止。
+// すべてのSQLで、一時テーブルを所有する単一の接続を使用する必要がある。
 func TestReceiptMySQLIntegration(t *testing.T) {
 	dsn := os.Getenv("RECEIPT_TEST_MYSQL_DSN")
 	if dsn == "" {
@@ -187,7 +187,49 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 	t.Run("list/empty", func(t *testing.T) {
 		checkList(t, []model.Receipt{})
 	})
-	// Keep a sentinel row to detect accidental changes to unrelated receipts.
+	t.Run("crud_lifecycle", func(t *testing.T) {
+		p := payload()
+		created := successful(http.MethodPost, p, 0)
+		checkList(t, []model.Receipt{created})
+		checkDetail := func(want model.Receipt) {
+			t.Helper()
+			rec := request(http.MethodGet, "", "", want.ID)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("get: status=%d body=%s", rec.Code, rec.Body.String())
+			}
+			var got model.Receipt
+			if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("detail mismatch: got=%+v want=%+v", got, want)
+			}
+		}
+		checkDetail(created)
+		// TIMESTAMPは秒単位の精度のため、内容変更時に更新日時が進むように待機する。
+		time.Sleep(1100 * time.Millisecond)
+		p["store_name"] = "CRUD更新店舗"
+		p["price"] = 789
+		p["purchase_date"] = "2026-10-04T00:00:00Z"
+		p["category"] = "日用品"
+		p["memo"] = "更新後のメモ"
+		updated := successful(http.MethodPut, p, created.ID)
+		if !updated.CreatedAt.Equal(created.CreatedAt) || !updated.UpdatedAt.After(created.UpdatedAt) {
+			t.Fatal("changed update must preserve created_at and advance updated_at")
+		}
+		checkDetail(updated)
+		checkList(t, []model.Receipt{updated})
+		rec := request(http.MethodDelete, "", "", created.ID)
+		if rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
+			t.Fatalf("delete: status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		checkList(t, []model.Receipt{})
+		rec = request(http.MethodGet, "", "", created.ID)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("get after delete: status=%d body=%s", rec.Code, rec.Body.String())
+		}
+	})
+	// 無関係なレシートへの意図しない変更を検出するため、監視用の行を保持する。
 	sentinel := successful(http.MethodPost, payload(), 0)
 	t.Run("list/one", func(t *testing.T) {
 		checkList(t, []model.Receipt{sentinel})
@@ -216,11 +258,11 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 			p := payload()
 			tc.edit(p)
 			target = successful(http.MethodPost, p, 0)
-			// The URL identifies the target even when the body omits the ID.
+			// 本文にIDが含まれていない場合も、URLで対象を特定する。
 			delete(p, "id")
 			p["store_name"] = "更新前"
 			successful(http.MethodPut, p, target.ID)
-			// A conflicting body ID must not redirect the update.
+			// 本文に異なるIDが指定されても、更新対象を変更してはならない。
 			p["id"] = target.ID + 1000
 			tc.edit(p)
 			if tc.name != "maximums" && tc.name != "whitespace_preserved" {
@@ -290,7 +332,7 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 			p := payload()
 			p["id"] = tc.id
 			p["store_name"] = "ID検証/" + tc.name
-			// successful also verifies the response ID and all unrelated rows.
+			// successfulでは、レスポンスのIDと無関係なすべての行も検証する。
 			successful(http.MethodPut, p, target.ID)
 		})
 	}

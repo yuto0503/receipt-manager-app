@@ -14,8 +14,8 @@ import (
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/model"
 )
 
-// The pointer distinguishes an omitted/null price from an explicit zero.
-// Receipt stays unchanged for persistence and response serialization.
+// ポインタで、priceの省略・nullと明示的な0を区別する。
+// 永続化とレスポンスのシリアライズに使用するReceiptは変更しない。
 type receiptRequest struct {
 	model.Receipt
 	Price        *int64  `json:"price"`
