@@ -158,7 +158,7 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 		return stored
 	}
 	// Keep a sentinel row to detect accidental changes to unrelated receipts.
-	successful(http.MethodPost, payload(), 0)
+	sentinel := successful(http.MethodPost, payload(), 0)
 	var target model.Receipt
 	for _, tc := range []struct {
 		name string
@@ -196,6 +196,47 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 			target = successful(http.MethodPut, p, target.ID)
 		})
 	}
+	t.Run("update_body_id/omitted", func(t *testing.T) {
+		p := payload()
+		delete(p, "id")
+		p["store_name"] = "ID省略で更新した店舗"
+		p["price"] = 321
+		p["memo"] = "URLのIDで更新"
+		// HTTP 200、レスポンスと保存先のID・内容、他の行が不変であることを確認する。
+		successful(http.MethodPut, p, target.ID)
+	})
+	for _, tc := range []struct {
+		name string
+		id   any
+	}{
+		{"matching", target.ID},
+		{"other_existing_receipt", sentinel.ID},
+		{"nonexistent", target.ID + 1000},
+		{"zero", 0},
+		{"negative", -1},
+		{"null", nil},
+	} {
+		t.Run("update_body_id/"+tc.name, func(t *testing.T) {
+			p := payload()
+			p["id"] = tc.id
+			p["store_name"] = "ID検証/" + tc.name
+			// successful also verifies the response ID and all unrelated rows.
+			successful(http.MethodPut, p, target.ID)
+		})
+	}
+	t.Run("missing_url_target_with_existing_body_id", func(t *testing.T) {
+		before := snapshot()
+		p := payload()
+		p["id"] = sentinel.ID
+		p["store_name"] = "変更されてはいけない店舗"
+		rec := request(http.MethodPut, encode(p), echo.MIMEApplicationJSON, target.ID+1000)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		if !reflect.DeepEqual(before, snapshot()) {
+			t.Fatal("body ID redirected update when URL target was missing")
+		}
+	})
 	type invalidCase struct{ name, body, contentType string }
 	var cases []invalidCase
 	for _, field := range []string{"store_name", "price", "purchase_date", "category", "memo"} {

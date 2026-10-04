@@ -83,7 +83,7 @@ func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
-	// 更新対象は本文ではなくURLのIDで指定する。
+	// JSONのidはURLと異なる場合も無視し、更新対象は必ずURLのIDで指定する。
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
