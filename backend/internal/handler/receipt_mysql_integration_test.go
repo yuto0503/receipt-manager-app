@@ -36,6 +36,8 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 		t.Fatal("invalid test DSN")
 	}
 	cfg.ParseTime = true
+	// 同一内容のUPDATEが更新件数0になる設定で回帰を検証する。
+	cfg.ClientFoundRows = false
 	cfg.Timeout = 5 * time.Second
 	cfg.ReadTimeout = 5 * time.Second
 	cfg.WriteTimeout = 5 * time.Second
@@ -196,6 +198,36 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 			target = successful(http.MethodPut, p, target.ID)
 		})
 	}
+	t.Run("update_outcomes", func(t *testing.T) {
+		p := payload()
+		created := successful(http.MethodPost, p, 0)
+		t.Run("changed", func(t *testing.T) {
+			p["store_name"] = "内容変更の検証店舗"
+			p["price"] = 456
+			successful(http.MethodPut, p, created.ID)
+		})
+		t.Run("unchanged", func(t *testing.T) {
+			before := snapshot()
+			successful(http.MethodPut, p, created.ID)
+			if !reflect.DeepEqual(before, snapshot()) {
+				t.Fatal("identical update changed rows or timestamps")
+			}
+		})
+		t.Run("not_found", func(t *testing.T) {
+			before := snapshot()
+			rec := request(http.MethodPut, encode(p), echo.MIMEApplicationJSON, created.ID+1000)
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+			}
+			var response map[string]string
+			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || response["message"] != "レシートが存在しません。" {
+				t.Fatalf("unexpected error response: %s", rec.Body.String())
+			}
+			if !reflect.DeepEqual(before, snapshot()) {
+				t.Fatal("missing target update changed rows or timestamps")
+			}
+		})
+	})
 	t.Run("update_body_id/omitted", func(t *testing.T) {
 		p := payload()
 		delete(p, "id")

@@ -133,7 +133,7 @@ func (r *ReceiptRepository) CreateReceipt(receipt model.Receipt) (model.Receipt,
 
 // 更新API
 func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt, error) {
-	result, err := r.db.Exec(`
+	_, err := r.db.Exec(`
 	UPDATE receipts 
 	SET 
 		store_name = ?,
@@ -154,14 +154,10 @@ func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt,
 		return model.Receipt{}, err
 	}
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return model.Receipt{}, err
-	}
-
-	if affected == 0 {
+	// 同じ内容への更新も更新件数0になるため、更新後の取得で存在を判定する。
+	updatedReceipt, err := r.GetReceiptByID(receipt.ID)
+	if errors.Is(err, sql.ErrNoRows) {
 		return model.Receipt{}, ErrReceiptNotFound
 	}
-
-	return r.GetReceiptByID(receipt.ID)
+	return updatedReceipt, err
 }
