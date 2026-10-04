@@ -38,8 +38,8 @@ func (r *ReceiptRepository) GetReceipts() ([]model.Receipt, error) {
 	}
 	defer rows.Close()
 
-	// ここにデータを追加していく
-	var receipts []model.Receipt
+	// 0件でもJSONがnullではなく空配列になるように初期化する。
+	receipts := make([]model.Receipt, 0)
 
 	for rows.Next() {
 		var receipt model.Receipt

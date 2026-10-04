@@ -159,8 +159,39 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 		}
 		return stored
 	}
+	checkList := func(t *testing.T, want []model.Receipt) {
+		t.Helper()
+		rec := request(http.MethodGet, "", "", 0)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		if !strings.HasPrefix(rec.Header().Get(echo.HeaderContentType), echo.MIMEApplicationJSON) {
+			t.Fatalf("unexpected Content-Type: %s", rec.Header().Get(echo.HeaderContentType))
+		}
+		var got []model.Receipt
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		if got == nil {
+			t.Fatalf("expected JSON array, got %s", rec.Body.String())
+		}
+		if len(want) == 0 && strings.TrimSpace(rec.Body.String()) != "[]" {
+			t.Fatalf("expected [], got %s", rec.Body.String())
+		}
+		// 一覧の並び順はAPIの契約に含めず、全フィールドと件数を比較する。
+		sort.Slice(got, func(i, j int) bool { return got[i].ID < got[j].ID })
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("list mismatch: got=%+v want=%+v", got, want)
+		}
+	}
+	t.Run("list/empty", func(t *testing.T) {
+		checkList(t, []model.Receipt{})
+	})
 	// Keep a sentinel row to detect accidental changes to unrelated receipts.
 	sentinel := successful(http.MethodPost, payload(), 0)
+	t.Run("list/one", func(t *testing.T) {
+		checkList(t, []model.Receipt{sentinel})
+	})
 	var target model.Receipt
 	for _, tc := range []struct {
 		name string
@@ -198,6 +229,13 @@ func TestReceiptMySQLIntegration(t *testing.T) {
 			target = successful(http.MethodPut, p, target.ID)
 		})
 	}
+	t.Run("list/multiple", func(t *testing.T) {
+		want := snapshot()
+		if len(want) < 2 {
+			t.Fatal("expected multiple test receipts")
+		}
+		checkList(t, want)
+	})
 	t.Run("update_outcomes", func(t *testing.T) {
 		p := payload()
 		created := successful(http.MethodPost, p, 0)
