@@ -1,12 +1,12 @@
 package handler
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/model"
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/repository"
 	"github.com/yuto-yamazaki/receipt-manager-app/backend/internal/service"
 )
@@ -39,11 +39,17 @@ func (h *ReceiptHandler) GetReceipts(c echo.Context) error {
 
 // 1件取得
 func (h *ReceiptHandler) GetReceiptByID(c echo.Context) error {
-	// intに変更
+	// IDは1以上の整数のみ受け付ける。
 	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
+	}
 	receipt, err := h.service.GetReceiptByID(id)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "レシートが存在しません。"})
+		}
 		return c.JSON(
 			http.StatusInternalServerError,
 			map[string]string{
@@ -57,15 +63,9 @@ func (h *ReceiptHandler) GetReceiptByID(c echo.Context) error {
 
 // 登録API
 func (h *ReceiptHandler) CreateReceipt(c echo.Context) error {
-	var receipt model.Receipt
-
-	if err := c.Bind(&receipt); err != nil {
-		return c.JSON(
-			http.StatusInternalServerError,
-			map[string]string{
-				"message": "リクエストが不正です",
-			},
-		)
+	receipt, err := bindReceipt(c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	createdReceipt, err := h.service.CreateReceipt(receipt)
 
@@ -83,16 +83,16 @@ func (h *ReceiptHandler) CreateReceipt(c echo.Context) error {
 
 // 更新API
 func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
-	var receipt model.Receipt
-
-	if err := c.Bind(&receipt); err != nil {
-		return c.JSON(
-			http.StatusBadRequest,
-			map[string]string{
-				"message": "リクエストが不正です",
-			},
-		)
+	receipt, err := bindReceipt(c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
+	// JSONのidはURLと異なる場合も無視し、更新対象は必ずURLのIDで指定する。
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
+	}
+	receipt.ID = id
 	updatedReceipt, err := h.service.UpdateReceipt(receipt)
 
 	if err != nil {
@@ -114,4 +114,19 @@ func (h *ReceiptHandler) UpdateReceipt(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, updatedReceipt)
+}
+
+// 削除API
+func (h *ReceiptHandler) DeleteReceipt(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "IDは1以上の整数で指定してください。"})
+	}
+	if err := h.service.DeleteReceipt(id); err != nil {
+		if errors.Is(err, repository.ErrReceiptNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "レシートが存在しません。"})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "レシートの削除に失敗しました。"})
+	}
+	return c.NoContent(http.StatusNoContent)
 }

@@ -1,5 +1,5 @@
 # -------------------------
-# Frontend (Next.js)
+# フロントエンド（Next.js）
 # -------------------------
 frontend/node_modules/
 frontend/.pnp
@@ -20,7 +20,7 @@ frontend/next-env.d.ts
 frontend/*.tsbuildinfo
 
 # -------------------------
-# Backend (Go)
+# バックエンド（Go）
 # -------------------------
 backend/.env
 backend/tmp/
@@ -31,7 +31,7 @@ backend/tmp/
 .DS_Store
 
 # -------------------------
-# Logs
+# ログ
 # -------------------------
 *.log
 npm-debug.log*
@@ -40,7 +40,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # -------------------------
-# Secrets
+# 機密情報
 # -------------------------
 *.pem
 
@@ -50,12 +50,12 @@ yarn-error.log*
 .vercel
 
 # -------------------------
-# Example env
+# 環境変数の設定例
 # -------------------------
 !backend/.env.example
 !frontend/.env.example
 
 # -------------------------
-# other
+# その他
 # -------------------------
 local_docs

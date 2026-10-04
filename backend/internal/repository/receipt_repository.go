@@ -38,8 +38,8 @@ func (r *ReceiptRepository) GetReceipts() ([]model.Receipt, error) {
 	}
 	defer rows.Close()
 
-	// ここにデータを追加していく
-	var receipts []model.Receipt
+	// 0件でもJSONがnullではなく空配列になるように初期化する。
+	receipts := make([]model.Receipt, 0)
 
 	for rows.Next() {
 		var receipt model.Receipt
@@ -133,7 +133,7 @@ func (r *ReceiptRepository) CreateReceipt(receipt model.Receipt) (model.Receipt,
 
 // 更新API
 func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt, error) {
-	result, err := r.db.Exec(`
+	_, err := r.db.Exec(`
 	UPDATE receipts 
 	SET 
 		store_name = ?,
@@ -154,14 +154,26 @@ func (r *ReceiptRepository) UpdateReceipt(receipt model.Receipt) (model.Receipt,
 		return model.Receipt{}, err
 	}
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return model.Receipt{}, err
-	}
-
-	if affected == 0 {
+	// 同じ内容への更新も更新件数0になるため、更新後の取得で存在を判定する。
+	updatedReceipt, err := r.GetReceiptByID(receipt.ID)
+	if errors.Is(err, sql.ErrNoRows) {
 		return model.Receipt{}, ErrReceiptNotFound
 	}
+	return updatedReceipt, err
+}
 
-	return r.GetReceiptByID(receipt.ID)
+// 指定したレシートを物理削除する。
+func (r *ReceiptRepository) DeleteReceipt(id int) error {
+	result, err := r.db.Exec("DELETE FROM receipts WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrReceiptNotFound
+	}
+	return nil
 }

@@ -1,4 +1,4 @@
--- Remove AUTO_INCREMENT before converting the column back to text.
+-- カラムを文字列型に戻す前に、AUTO_INCREMENTを解除する。
 ALTER TABLE receipts
     MODIFY COLUMN id INT NOT NULL;
 
