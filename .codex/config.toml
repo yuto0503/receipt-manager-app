@@ -1,0 +1,6 @@
+# receipt-manager-app のプロジェクト共通Codex設定
+# https://learn.chatgpt.com/docs/config-file/config-basic
+# 信頼されたプロジェクトで読み込まれます。
+# 現時点では上書き項目なし。ユーザー設定と実行環境の設定を引き継ぎます。
+# 必要になった設定だけ、公式リファレンスでキーと値を確認して追加してください。
+# 設定の目的・更新方針は settings/README.md を参照してください。
