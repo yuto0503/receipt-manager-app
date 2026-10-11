@@ -1,16 +1,10 @@
-import type { ReceiptInput } from "../types/receipt";
-export type FormValues = {
-  store_name: string;
-  price: string;
-  purchase_date: string;
-  category: string;
-  memo: string;
-};
-export type FormErrors = Partial<Record<keyof FormValues, string>>;
+import type { ReceiptFormValues, ReceiptInput } from "../types/receipt";
+
+export type FormErrors = Partial<Record<keyof ReceiptFormValues, string>>;
 
 // Go strings.TrimSpaceと同じUnicode White_Spaceを必須判定に使う。
 const blank = /^\p{White_Space}*$/u;
-export function parseReceiptInput(values: FormValues): {
+export function parseReceiptInput(values: ReceiptFormValues): {
   errors: FormErrors;
   input?: ReceiptInput;
 } {

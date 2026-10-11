@@ -1,15 +1,18 @@
 "use client";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
-import { isReceipt, type Receipt } from "@/types/receipt";
+import {
+  isReceipt,
+  type Receipt,
+  type ReceiptFormValues,
+} from "@/types/receipt";
 import {
   parseReceiptInput,
   type FormErrors,
-  type FormValues,
 } from "@/lib/receipt-input";
 
 export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
-  const [values, setValues] = useState<FormValues>({
+  const [values, setValues] = useState<ReceiptFormValues>({
     store_name: receipt?.store_name ?? "",
     price: receipt ? String(receipt.price) : "",
     purchase_date: receipt?.purchase_date.slice(0, 10) ?? "",
