@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: Arial, "Noto Sans JP", sans-serif;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  a {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  button,
+  .button {
+    display: inline-block;
+    border-radius: 0.5rem;
+    background: #1d4ed8;
+    color: white;
+    padding: 0.65rem 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+  input,
+  textarea {
+    width: 100%;
+    border: 1px solid #64748b;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 0.65rem;
+    color: #0f172a;
+  }
+  :focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+  }
+  dt {
+    font-size: 0.875rem;
+    color: #475569;
+    margin-bottom: 0.25rem;
   }
 }
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .panel {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.75rem;
+    background: white;
+    padding: 1.25rem;
+    overflow-wrap: anywhere;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+  .danger {
+    background: #b91c1c;
+  }
 }

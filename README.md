@@ -2,6 +2,91 @@
 
 レシートの画像をアップロードして家計簿を自動生成するWebアプリ
 
+## 起動・停止コマンド（Docker Compose）
+
+Docker Desktopを起動し、以下はすべてプロジェクトのルート（`receipt-manager-app/`）で実行します。
+
+### 接続設定
+
+`backend/.env` と `frontend/.env.local` を用意してください。以下は `docker-compose.yml` のローカル開発用設定に対応する例です。
+
+`backend/.env`:
+
+```dotenv
+DB_USER=root
+DB_PASSWORD=password
+DB_HOST=mysql
+DB_PORT=3306
+DB_NAME=receipt_app
+```
+
+`frontend/.env.local`:
+
+```dotenv
+SERVER_API_BASE_URL=http://backend:8080
+```
+
+### バックエンド・フロントエンドを同時に起動
+
+```bash
+docker compose up -d --build mysql backend frontend
+```
+
+`-d` はバックグラウンド起動、`--build` は起動前のイメージビルドです。
+
+### 個別に起動
+
+バックエンドとMySQL:
+
+```bash
+docker compose up -d --build mysql backend
+```
+
+フロントエンド:
+
+```bash
+docker compose up -d --build frontend
+```
+
+フロントエンドの起動時も、依存するバックエンド・MySQLが停止していれば一緒に起動します。
+
+### 初回のDB準備
+
+MySQLが接続を受け付ける状態になった後、テーブル作成・未適用のマイグレーション適用を行います。接続先はCompose内のローカル開発用MySQLです。
+
+```bash
+make migrate-up
+```
+
+### アクセス・ログ確認
+
+- フロントエンド: [http://localhost:3000](http://localhost:3000)
+- バックエンドの起動確認: [http://localhost:8080/health](http://localhost:8080/health)
+
+```bash
+# コンテナの起動状態
+docker compose ps
+
+# フロントエンド・バックエンドのログ（Ctrl+Cでログ表示を終了）
+docker compose logs -f frontend backend
+```
+
+### 停止・再開
+
+```bash
+# フロントエンド・バックエンド・MySQLを停止
+docker compose stop
+
+# 個別に停止する場合
+docker compose stop frontend
+docker compose stop backend
+
+# 停止した既存コンテナを再開
+docker compose start mysql backend frontend
+```
+
+`stop` ではDBのデータは残ります。設定や依存関係を変更した場合は、再度 `docker compose up -d --build mysql backend frontend` を実行してください。
+
 ## 技術スタック
 
 ### Frontend
@@ -194,12 +279,16 @@
 
 ```
 frontend/
-├── app/
-├── components/
-├── lib/
-├── types/
+├── src/
+│   ├── app/
+│   ├── components/
+│   ├── lib/
+│   └── types/
+├── tests/
 └── public/
 ```
+
+フロントエンドの一覧・登録・詳細・編集・削除画面を実装しています。画面URL、接続設定、起動・確認手順は [frontend/README.md](frontend/README.md) を参照してください。上記ロードマップのチェック状態は過去の記録を含みます。
 
 ## Backend
 
