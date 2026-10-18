@@ -1,7 +1,8 @@
 import Link from "next/link";
 import ReceiptList from "@/components/ReceiptList";
 import ReceiptError from "@/components/ReceiptError";
-import { ApiError, getReceipts } from "@/lib/receipts";
+import { ApiError } from "@/lib/api";
+import { getReceipts } from "@/lib/receipts";
 
 export default async function ReceiptsPage() {
   let receipts;

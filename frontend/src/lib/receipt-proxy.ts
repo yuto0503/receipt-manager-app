@@ -1,6 +1,7 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
-import { ApiError, apiRequest, validId } from "@/lib/receipts";
+import { ApiError, apiRequest } from "@/lib/api";
+import { validId } from "@/lib/receipts";
 import { isReceipt } from "@/types/receipt";
 
 export async function mutateReceipt(

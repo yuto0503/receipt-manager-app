@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import ReceiptForm from "@/components/ReceiptForm";
 import ReceiptError from "@/components/ReceiptError";
-import { ApiError, getReceipt } from "@/lib/receipts";
+import { ApiError } from "@/lib/api";
+import { getReceipt } from "@/lib/receipts";
 
 export default async function EditReceiptPage({
   params,

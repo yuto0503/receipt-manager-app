@@ -1,65 +1,9 @@
 import "server-only";
+import { ApiError, apiRequest } from "@/lib/api";
 import { isReceipt, type Receipt } from "@/types/receipt";
-
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
 
 export function validId(id: string) {
   return /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
-}
-
-export async function apiRequest(
-  path: string,
-  init?: RequestInit,
-): Promise<unknown> {
-  const base = process.env.SERVER_API_BASE_URL;
-  if (!base)
-    throw new ApiError(
-      503,
-      "API接続先が設定されていません。管理者に確認してください。",
-    );
-  let response: Response;
-  try {
-    response = await fetch(`${base.replace(/\/$/, "")}${path}`, {
-      ...init,
-      cache: "no-store",
-      signal: AbortSignal.timeout(10000),
-    });
-  } catch {
-    throw new ApiError(
-      503,
-      "APIに接続できませんでした。時間をおいて再試行してください。",
-    );
-  }
-  if (response.status === 204) return null;
-  let data: unknown;
-  try {
-    data = await response.json();
-  } catch {
-    throw new ApiError(502, "APIから正しい応答を受信できませんでした。");
-  }
-  if (!response.ok) {
-    const message =
-      data &&
-      typeof data === "object" &&
-      "message" in data &&
-      typeof data.message === "string"
-        ? data.message
-        : "処理に失敗しました。";
-    throw new ApiError(
-      response.status,
-      response.status >= 500
-        ? "APIの処理に失敗しました。時間をおいて再試行してください。"
-        : message,
-    );
-  }
-  return data;
 }
 
 export async function getReceipts(): Promise<Receipt[]> {

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import DeleteReceipt from "@/components/DeleteReceipt";
 import ReceiptError from "@/components/ReceiptError";
-import { ApiError, getReceipt } from "@/lib/receipts";
+import { ApiError } from "@/lib/api";
+import { getReceipt } from "@/lib/receipts";
 
 export default async function ReceiptPage({
   params,

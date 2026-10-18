@@ -22,6 +22,10 @@ npm run dev
 
 ## 画面・遷移
 
+Go APIへの通信は `src/lib/api.ts` の `apiRequest()` に集約しています。`SERVER_API_BASE_URL`、10秒のタイムアウト、キャッシュ無効化、HTTPステータスとJSONエラーの解析を共通化しています。204は本文なしとして扱い、エラー本文がJSONでなくてもHTTPステータスを保持します。500系の内部エラー詳細は利用者に公開しません。
+
+`api.ts`・`receipts.ts`・`receipt-proxy.ts` は `server-only` で保護されています。Client Componentからは取り込まず、ブラウザの更新操作は `/api/receipts` を使用してください。共有の型・入力検証はサーバー専用モジュールに依存させません。
+
 | URL | 内容 |
 | --- | --- |
 | `/` | `/receipts` へリダイレクト |
@@ -40,6 +44,7 @@ npm run lint
 npm run build
 # Node.js 24で実行。追加パッケージ不要
 node --test tests/receipt-input.test.mjs
+node --test tests/api.test.mjs
 ```
 
 画面の自動テストは実データに接続しないテスト専用APIで実行します。以下を別々のターミナルで起動します。
