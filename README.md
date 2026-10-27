@@ -8,7 +8,25 @@ Docker Desktopを起動し、以下はすべてプロジェクトのルート（
 
 ### 接続設定
 
-`backend/.env` と `frontend/.env.local` を用意してください。以下は `docker-compose.yml` のローカル開発用設定に対応する例です。
+初回はダミー値の設定例から `backend/.env` と `frontend/.env.local` を作成します。既存の実設定を上書きしないでください。
+
+```bash
+cp -n backend/.env.example backend/.env
+cp -n frontend/.env.example frontend/.env.local
+```
+
+Composeで動かす場合は `frontend/.env.local` の `SERVER_API_BASE_URL` を `http://backend:8080` に変更します。ホスト上のNext.jsでは `http://localhost:8080` を使います。
+
+実設定の `.env`・`.env.*` はGitの追跡対象外です。共有する `.env.example` と以下の例には、ローカル開発専用のダミー値だけを記載します。
+
+```bash
+# 実設定が無視されていることを確認（内容は表示しない）
+git check-ignore backend/.env backend/.env.local frontend/.env.local
+# 設定例だけが表示されることを確認
+git ls-files '*env*'
+```
+
+以下は `docker-compose.yml` のローカル開発用設定に対応する例です。
 
 `backend/.env`:
 
