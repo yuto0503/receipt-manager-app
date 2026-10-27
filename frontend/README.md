@@ -48,6 +48,7 @@ npm run build
 node --test tests/receipt-input.test.mjs
 node --test tests/api.test.mjs
 node --test tests/receipt-proxy.test.mjs
+node --test tests/receipt-client.test.mjs
 ```
 
 画面の自動テストは実データに接続しないテスト専用APIで実行します。以下を別々のターミナルで起動します。
@@ -68,3 +69,5 @@ RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-navigation.e2e.mjs
 ```
 
 直接アクセス・再読み込み・登録・編集・削除・キャンセル・入力エラー・404・不正ID・API異常・モバイル幅を検証します。これは画面とAPI中継のテストです。Go API・MySQLを使う結合確認は別途必要です。
+
+ブラウザの保存処理は `src/lib/receipt-client.ts` に集約し、JSONオブジェクトを送信します。失敗時は `ReceiptClientError.status` にHTTPステータスを保持します。

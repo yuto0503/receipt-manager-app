@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import {
-  isReceipt,
   type Receipt,
   type ReceiptFormValues,
 } from "@/types/receipt";
@@ -10,6 +9,8 @@ import {
   parseReceiptInput,
   type FormErrors,
 } from "@/lib/receipt-input";
+
+import { saveReceipt, ReceiptClientError } from "@/lib/receipt-client";
 
 export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   const [values, setValues] = useState<ReceiptFormValues>({
@@ -38,36 +39,13 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
     sending.current = true;
     setPending(true);
     try {
-      const response = await fetch(
-        receipt ? `/api/receipts/${receipt.id}` : "/api/receipts",
-        {
-          method: receipt ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(result.input),
-        },
-      );
-      const data: unknown = await response.json();
-      if (!response.ok) {
-        setMessage(
-          data &&
-            typeof data === "object" &&
-            "message" in data &&
-            typeof data.message === "string"
-            ? data.message
-            : "保存に失敗しました。",
-        );
-      } else if (isReceipt(data)) {
-        // 保存後はサーバーから最新の詳細を読み直す。
-        window.location.assign(`/receipts/${data.id}`);
-        return;
-      } else
-        setMessage(
-          "保存結果を確認できませんでした。一覧を確認してから再操作してください。",
-        );
-    } catch {
-      setMessage(
-        "保存結果を確認できませんでした。通信状態と一覧を確認してから再操作してください。",
-      );
+      const saved = await saveReceipt(result.input, receipt?.id);
+      // 保存後はサーバーから最新の詳細を読み直す。
+      window.location.assign(`/receipts/${saved.id}`);
+      return;
+    } catch (error) {
+      setMessage(error instanceof ReceiptClientError ? error.message :
+        "保存結果を確認できませんでした。通信状態と一覧を確認してから再操作してください。");
     }
     sending.current = false;
     setPending(false);
