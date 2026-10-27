@@ -132,3 +132,9 @@ test("削除の204以外の成功応答を誤って完了扱いしない", async
   respond('{}', 200);
   await assert.rejects(apiRequest("/receipts/1", { method: "DELETE" }), { status: 502 });
 });
+
+test("呼び出し側がキャッシュを要求しても最新データを取得する", async () => {
+  const fetch = respond("[]");
+  await apiRequest("/receipts", { cache: "force-cache" });
+  assert.equal(fetch.mock.calls[0].arguments[1].cache, "no-store");
+});

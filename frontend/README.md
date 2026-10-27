@@ -49,6 +49,7 @@ node --test tests/receipt-input.test.mjs
 node --test tests/api.test.mjs
 node --test tests/receipt-proxy.test.mjs
 node --test tests/receipt-client.test.mjs
+node --test tests/receipts.test.mjs
 ```
 
 画面の自動テストは実データに接続しないテスト専用APIで実行します。以下を別々のターミナルで起動します。
@@ -75,3 +76,5 @@ RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-navigation.e2e.mjs
 クライアントの通信失敗は `ReceiptClientError.kind`（http / network / timeout / invalid-response）で区別します。HTTPエラーは本文が不正でもステータスを保持し、通信例外の詳細は表示しません。ブラウザの待機上限は15秒、Go APIへの待機上限は10秒です。
 
 APIのエラー文はReactのテキストとして表示します。空・欠落したメッセージは「保存に失敗しました。」「削除に失敗しました。」で補い、500系の詳細はブラウザ側でも隠します。
+
+一覧・詳細は毎回Go APIを `cache: "no-store"` で取得します。保存・削除成功時には `/receipts` 配下のキャッシュを無効化し、画面を再読込して最新状態に遷移します。

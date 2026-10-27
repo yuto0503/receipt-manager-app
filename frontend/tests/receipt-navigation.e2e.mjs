@@ -47,6 +47,7 @@ try {
   await page.getByRole("button", { name: "保存する" }).click();
   await page.waitForURL(/\/receipts\/\d+$/);
   const detail = page.url();
+  await page.getByText("操作検証店", { exact: true }).waitFor();
   assert.ok((await page.locator("main").innerText()).includes("操作検証店"));
   assert.ok((await page.locator("main").innerText()).includes("2024-02-29"));
   await page.getByRole("link", { name: "編集する" }).click();
@@ -63,6 +64,7 @@ try {
   await page.locator("#store_name").fill("更新検証店");
   await page.getByRole("button", { name: "保存する" }).click();
   await page.waitForURL(detail);
+  await page.getByText("更新検証店", { exact: true }).waitFor();
   assert.ok((await page.locator("main").innerText()).includes("更新検証店"));
   await page.getByRole("link", { name: "一覧へ戻る" }).click();
   await page.getByRole("link", { name: "更新検証店" }).click();
@@ -76,6 +78,8 @@ try {
   await page.getByRole("button", { name: "削除を実行" }).click();
   await page.waitForURL("**/receipts");
   assert.equal(await page.getByRole("link", { name: "更新検証店" }).count(), 0);
+  await page.goto(detail);
+  assert.equal(await page.locator("h1").innerText(), "対象のレシートが見つかりません");
   for (const path of ["/receipts/9999", "/receipts/9999/edit"]) {
     await page.goto(base + path);
     assert.equal(
