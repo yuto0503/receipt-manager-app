@@ -6,11 +6,14 @@ import { isReceipt } from "@/types/receipt";
 
 export async function mutateReceipt(
   request: Request,
-  method: "POST" | "PUT" | "DELETE",
-  id?: string,
+  ...[method, id]: [method: "POST"] | [method: "PUT" | "DELETE", id: string]
 ) {
   try {
-    if (id !== undefined && !validId(id))
+    if (method !== "POST" && method !== "PUT" && method !== "DELETE")
+      throw new ApiError(405, "このメソッドは使用できません。");
+    if (method === "POST" && id !== undefined)
+      throw new ApiError(400, "登録先にIDは指定できません。");
+    if (method !== "POST" && (typeof id !== "string" || !validId(id)))
       throw new ApiError(400, "IDは1以上の整数で指定してください。");
     // ブラウザからの別オリジンの更新を拒否する。
     const origin = request.headers.get("origin");
@@ -33,8 +36,10 @@ export async function mutateReceipt(
         throw new ApiError(400, "JSONオブジェクトを指定してください。");
       body = JSON.stringify(input);
     }
-    const data = await apiRequest(id ? `/receipts/${id}` : "/receipts", {
+    // URL・クエリ・本文の指定で転送先やメソッドを変更させない。
+    const data = await apiRequest(method === "POST" ? "/receipts" : `/receipts/${id}`, {
       method,
+      redirect: "error",
       headers: { "Content-Type": "application/json" },
       body,
     });

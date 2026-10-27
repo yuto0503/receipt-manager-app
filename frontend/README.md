@@ -26,6 +26,8 @@ Go APIへの通信は `src/lib/api.ts` の `apiRequest()` に集約していま�
 
 `api.ts`・`receipts.ts`・`receipt-proxy.ts` は `server-only` で保護されています。Client Componentからは取り込まず、ブラウザの更新操作は `/api/receipts` を使用してください。共有の型・入力検証はサーバー専用モジュールに依存させません。
 
+中継は `POST /api/receipts` → `POST /receipts`、`PUT・DELETE /api/receipts/:id` → 同じメソッドの `/receipts/:id` に限定します。IDは1以上の安全な整数を表す数字列のみ許可し、クエリ・本文・メソッド上書きヘッダーで転送先を変更できません。Go APIのリダイレクトも追跡しません。未対応メソッドは405、OPTIONSはNext.jsが応答し、Go APIへ転送しません。成功時は登録201・更新200・削除204（本文なし）を返します。
+
 | URL | 内容 |
 | --- | --- |
 | `/` | `/receipts` へリダイレクト |
@@ -45,6 +47,7 @@ npm run build
 # Node.js 24で実行。追加パッケージ不要
 node --test tests/receipt-input.test.mjs
 node --test tests/api.test.mjs
+node --test tests/receipt-proxy.test.mjs
 ```
 
 画面の自動テストは実データに接続しないテスト専用APIで実行します。以下を別々のターミナルで起動します。
