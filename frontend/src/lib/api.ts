@@ -33,8 +33,17 @@ export async function apiRequest(
   if (!base)
     throw new ApiError(
       503,
-      "API接続先が設定されていません。管理者に確認してください。",
+      "API接続先が設定されていません。管理者にSERVER_API_BASE_URLの設定を確認してください。",
     );
+
+  try {
+    const url = new URL(base);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+      throw new Error("invalid base URL");
+  } catch {
+    // 設定値そのものやURL解析エラーは利用者へ返さない。
+    throw new ApiError(503, "API接続先の設定が不正です。管理者にSERVER_API_BASE_URLの設定を確認してください。");
+  }
 
   let response: Response;
   try {

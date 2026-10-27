@@ -138,3 +138,12 @@ test("呼び出し側がキャッシュを要求しても最新データを取�
   await apiRequest("/receipts", { cache: "force-cache" });
   assert.equal(fetch.mock.calls[0].arguments[1].cache, "no-store");
 });
+
+test("不正な接続先は通信前に拒否し設定値を表示しない", async () => {
+  const fetch = test.mock.method(globalThis, "fetch", () => assert.fail("不正設定で通信しない"));
+  for (const base of ["private-host", "file:///private", "ftp://private.test", "http://user:secret@private.test", "http://private.test?key=secret", "http://private.test#secret"]) {
+    process.env.SERVER_API_BASE_URL = base;
+    await assert.rejects(apiRequest("/receipts"), error => error.status === 503 && error.message.includes("設定が不正") && !error.message.includes("private") && !error.message.includes("secret"));
+  }
+  assert.equal(fetch.mock.callCount(), 0);
+});
