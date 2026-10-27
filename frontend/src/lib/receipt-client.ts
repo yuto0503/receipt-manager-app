@@ -14,6 +14,7 @@ export class ReceiptClientError extends Error {
 }
 
 async function requestReceipt(path: string, init: RequestInit): Promise<unknown> {
+  const fallback = init.method === "DELETE" ? "削除に失敗しました。" : "保存に失敗しました。";
   let response: Response;
   try {
     response = await fetch(path, { ...init, signal: AbortSignal.timeout(15000) });
@@ -32,16 +33,16 @@ async function requestReceipt(path: string, init: RequestInit): Promise<unknown>
     data = await response.json();
   } catch (error) {
     // エラー本文がHTMLや空でも、HTTPステータスは失わない。
-    if (!response.ok) throw new ReceiptClientError(response.status, "保存に失敗しました。");
+    if (!response.ok) throw new ReceiptClientError(response.status, fallback);
     const timeout = error instanceof Error && error.name === "TimeoutError";
     throw new ReceiptClientError(timeout ? 503 : 502,
       "応答を確認できませんでした。一覧で結果を確認してから再操作してください。",
       timeout ? "timeout" : "invalid-response");
   }
   if (!response.ok) {
-    const message = data && typeof data === "object" && "message" in data &&
-      typeof data.message === "string" && data.message.trim()
-      ? data.message : "保存に失敗しました。";
+    const message = response.status < 500 && data && typeof data === "object" && "message" in data &&
+      typeof data.message === "string" && data.message.trim() && data.message !== "処理に失敗しました。"
+      ? data.message : fallback;
     throw new ReceiptClientError(response.status, message);
   }
   return data;

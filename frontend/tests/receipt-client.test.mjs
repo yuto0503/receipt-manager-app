@@ -62,3 +62,21 @@ test("削除204はJSON解析せず完了し、それ以外の成功応答は拒�
   test.mock.method(globalThis, "fetch", async () => Response.json({}));
   await assert.rejects(deleteReceipt(7), { status: 502, kind: "invalid-response" });
 });
+
+test("空・欠落・不正なmessageには操作別メッセージを使い、500の詳細を隠す", async () => {
+  for (const [action, fallback] of [[() => saveReceipt(input), "保存に失敗しました。"], [() => deleteReceipt(7), "削除に失敗しました。"]]) {
+    for (const data of [{}, { message: " " }, { message: 42 }, { message: "処理に失敗しました。" }]) {
+      test.mock.method(globalThis, "fetch", async () => Response.json(data, { status: 400 }));
+      await assert.rejects(action(), { status: 400, message: fallback });
+      test.mock.restoreAll();
+    }
+    test.mock.method(globalThis, "fetch", async () => Response.json({ message: "private connection details" }, { status: 500 }));
+    await assert.rejects(action(), { status: 500, message: fallback });
+    test.mock.restoreAll();
+  }
+});
+test("APIのmessageはHTMLに変換せず文字列として渡す", async () => {
+  const message = '<img src=x onerror="alert(1)">';
+  test.mock.method(globalThis, "fetch", async () => Response.json({ message }, { status: 400 }));
+  await assert.rejects(saveReceipt(input), { message });
+});
