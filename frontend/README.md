@@ -4,7 +4,7 @@ Next.js 16.2.10 / React 19.2.4 / Tailwind CSS 4。実装は `src/` 配下です�
 
 ## 起動
 
-Go APIとMySQLを起動し、`frontend/.env.local` に接続先を設定します。実設定・認証情報はコミットしないでください。
+Go APIとMySQLを起動し、初回のみ `frontend/.env.example` を `frontend/.env.local` にコピーして接続先を設定します。既存の実設定は上書きしないでください。実設定・認証情報はコミットしません。
 
 ```dotenv
 # ホスト上でNext.jsを動かす場合
@@ -14,9 +14,13 @@ SERVER_API_BASE_URL=http://localhost:8080
 
 ```sh
 cd frontend
+# 初回のみ（既存ファイルは上書きしない）
+cp -n .env.example .env.local
 npm ci
 npm run dev
 ```
+
+ホスト上では `http://localhost:8080`、Compose内では `http://backend:8080` を設定します。`backend` はCompose内部の名前なので、ブラウザの接続先には使いません。設定変更後はNext.jsを再起動してください。
 
 `http://localhost:3000` を開きます。接続先はサーバー専用です。初期取得はServer ComponentからGo APIへ、登録・更新・削除は同一オリジンの `/api/receipts` 経由で通信します。外部フォントのダウンロードは不要です。
 
