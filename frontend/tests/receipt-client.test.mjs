@@ -7,7 +7,7 @@ const hooks = registerHooks({
     return nextResolve(specifier, context);
   },
 });
-const { saveReceipt, ReceiptClientError } = await import("../src/lib/receipt-client.ts");
+const { saveReceipt, deleteReceipt, ReceiptClientError } = await import("../src/lib/receipt-client.ts");
 hooks.deregister();
 afterEach(() => test.mock.restoreAll());
 const input = { store_name: "テスト店", price: 0, purchase_date: "2026-10-28T00:00:00Z", category: "食費", memo: "" };
@@ -47,4 +47,18 @@ test("HTTPエラー・通信失敗・タイムアウト・不正JSONを区別す
     await assert.rejects(saveReceipt(input), e => e.status === 503 && e.kind === kind && !e.message.includes("private"));
     test.mock.restoreAll();
   }
+});
+
+test("削除204はJSON解析せず完了し、それ以外の成功応答は拒否する", async () => {
+  const response = new Response(null, { status: 204 });
+  const json = test.mock.method(response, "json", () => assert.fail("204を解析しない"));
+  const fetch = test.mock.method(globalThis, "fetch", async () => response);
+  assert.equal(await deleteReceipt(7), undefined);
+  assert.equal(json.mock.callCount(), 0);
+  assert.equal(fetch.mock.calls[0].arguments[0], "/api/receipts/7");
+  assert.equal(fetch.mock.calls[0].arguments[1].method, "DELETE");
+  assert.equal(fetch.mock.calls[0].arguments[1].body, undefined);
+  test.mock.restoreAll();
+  test.mock.method(globalThis, "fetch", async () => Response.json({}));
+  await assert.rejects(deleteReceipt(7), { status: 502, kind: "invalid-response" });
 });

@@ -2,6 +2,8 @@
 import { useRef, useState } from "react";
 import type { Receipt } from "@/types/receipt";
 
+import { deleteReceipt, ReceiptClientError } from "@/lib/receipt-client";
+
 export default function DeleteReceipt({ receipt }: { receipt: Receipt }) {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
@@ -13,26 +15,12 @@ export default function DeleteReceipt({ receipt }: { receipt: Receipt }) {
     setPending(true);
     setMessage("");
     try {
-      const response = await fetch(`/api/receipts/${receipt.id}`, {
-        method: "DELETE",
-      });
-      if (response.status === 204) {
-        window.location.assign("/receipts");
-        return;
-      }
-      const data: unknown = await response.json();
-      setMessage(
-        data &&
-          typeof data === "object" &&
-          "message" in data &&
-          typeof data.message === "string"
-          ? data.message
-          : "削除に失敗しました。",
-      );
-    } catch {
-      setMessage(
-        "削除結果を確認できませんでした。通信状態と一覧を確認してください。",
-      );
+      await deleteReceipt(receipt.id);
+      window.location.assign("/receipts");
+      return;
+    } catch (error) {
+      setMessage(error instanceof ReceiptClientError ? error.message :
+        "削除結果を確認できませんでした。通信状態と一覧を確認してください。");
     }
     sending.current = false;
     setPending(false);

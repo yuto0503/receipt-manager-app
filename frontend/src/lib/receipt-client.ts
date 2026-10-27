@@ -24,6 +24,9 @@ async function requestReceipt(path: string, init: RequestInit): Promise<unknown>
       : "接続できませんでした。通信状態と一覧を確認してから再操作してください。",
     timeout ? "timeout" : "network");
   }
+  if (response.status === 204) return null;
+  if (init.method === "DELETE" && response.ok)
+    throw new ReceiptClientError(502, "削除結果を確認できませんでした。一覧を確認してください。", "invalid-response");
   let data: unknown;
   try {
     data = await response.json();
@@ -53,4 +56,8 @@ export async function saveReceipt(input: ReceiptInput, id?: number): Promise<Rec
   if (!isReceipt(data))
     throw new ReceiptClientError(502, "保存結果を確認できませんでした。一覧を確認してから再操作してください。", "invalid-response");
   return data;
+}
+
+export async function deleteReceipt(id: number): Promise<void> {
+  await requestReceipt(`/api/receipts/${id}`, { method: "DELETE" });
 }

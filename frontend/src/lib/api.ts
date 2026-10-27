@@ -51,6 +51,8 @@ export async function apiRequest(
   }
 
   if (response.status === 204) return null;
+  if (init?.method === "DELETE" && response.ok)
+    throw new ApiError(502, "削除結果を確認できませんでした。一覧を確認してください。");
   let data: unknown;
   try {
     data = await response.json();

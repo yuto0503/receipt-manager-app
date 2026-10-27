@@ -127,3 +127,8 @@ test("本文読み取り中のタイムアウトも詳細を隠して503にす�
   test.mock.method(globalThis, "fetch", async () => ({ ok: true, status: 200, json: async () => { throw new DOMException("private", "AbortError"); } }));
   await assert.rejects(apiRequest("/receipts"), e => e.status === 503 && !e.message.includes("private"));
 });
+
+test("削除の204以外の成功応答を誤って完了扱いしない", async () => {
+  respond('{}', 200);
+  await assert.rejects(apiRequest("/receipts/1", { method: "DELETE" }), { status: 502 });
+});
