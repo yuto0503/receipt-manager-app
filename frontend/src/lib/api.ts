@@ -54,10 +54,12 @@ export async function apiRequest(
   let data: unknown;
   try {
     data = await response.json();
-  } catch {
+  } catch (error) {
     // HTMLや空のエラー本文でも、404などのHTTPステータスを失わない。
     if (!response.ok)
       throw new ApiError(response.status, errorMessage(response.status, null));
+    if (error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name))
+      throw new ApiError(503, "APIの応答がタイムアウトしました。時間をおいて再試行してください。");
     throw new ApiError(502, "APIから正しい応答を受信できませんでした。");
   }
   if (!response.ok)

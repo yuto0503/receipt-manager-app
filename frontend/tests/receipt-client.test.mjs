@@ -31,3 +31,20 @@ test("UI側で400と404を区別でき、理由を保持する", async () => {
     test.mock.restoreAll();
   }
 });
+
+test("HTTPエラー・通信失敗・タイムアウト・不正JSONを区別する", async () => {
+  for (const [response, status, kind] of [
+    [new Response("html", { status: 404 }), 404, "http"],
+    [new Response("invalid", { status: 200 }), 502, "invalid-response"],
+    [Response.json({}), 502, "invalid-response"],
+  ]) {
+    test.mock.method(globalThis, "fetch", async () => response);
+    await assert.rejects(saveReceipt(input), { status, kind });
+    test.mock.restoreAll();
+  }
+  for (const [error, kind] of [[new TypeError("private host"), "network"], [new DOMException("private timeout", "TimeoutError"), "timeout"]]) {
+    test.mock.method(globalThis, "fetch", async () => { throw error; });
+    await assert.rejects(saveReceipt(input), e => e.status === 503 && e.kind === kind && !e.message.includes("private"));
+    test.mock.restoreAll();
+  }
+});

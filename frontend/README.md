@@ -71,3 +71,5 @@ RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-navigation.e2e.mjs
 直接アクセス・再読み込み・登録・編集・削除・キャンセル・入力エラー・404・不正ID・API異常・モバイル幅を検証します。これは画面とAPI中継のテストです。Go API・MySQLを使う結合確認は別途必要です。
 
 ブラウザの保存処理は `src/lib/receipt-client.ts` に集約し、JSONオブジェクトを送信します。失敗時は `ReceiptClientError.status` にHTTPステータスを保持します。
+
+クライアントの通信失敗は `ReceiptClientError.kind`（http / network / timeout / invalid-response）で区別します。HTTPエラーは本文が不正でもステータスを保持し、通信例外の詳細は表示しません。ブラウザの待機上限は15秒、Go APIへの待機上限は10秒です。

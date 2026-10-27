@@ -121,3 +121,9 @@ test("ベースURL未設定・空白時は通信しない", async () => {
   }
   assert.equal(fetch.mock.callCount(), 0);
 });
+
+test("本文読み取り中のタイムアウトも詳細を隠して503にする", async () => {
+  process.env.SERVER_API_BASE_URL = "http://api.example.test";
+  test.mock.method(globalThis, "fetch", async () => ({ ok: true, status: 200, json: async () => { throw new DOMException("private", "AbortError"); } }));
+  await assert.rejects(apiRequest("/receipts"), e => e.status === 503 && !e.message.includes("private"));
+});
