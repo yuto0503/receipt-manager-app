@@ -14,6 +14,9 @@ try {
   ]) {
     await page.goto(base + path);
     await page.getByRole("heading", { name: heading, exact: true }).waitFor();
+    assert.equal(await page.locator("html").getAttribute("lang"), "ja");
+    assert.equal(await page.title(), "レシート管理");
+    assert.equal(await page.locator('meta[name="description"]').getAttribute("content"), "日々のレシートを登録・整理するアプリ");
     const nav = page.getByRole("navigation", { name: "メインナビゲーション" });
     assert.equal(await nav.getByRole("link", { name: "レシート管理", exact: true }).getAttribute("href"), "/receipts");
     await nav.getByRole("link", { name: "新規登録", exact: true }).click();
