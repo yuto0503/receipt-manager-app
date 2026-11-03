@@ -71,9 +71,15 @@ SERVER_API_BASE_URL=http://127.0.0.1:18080 npm run start -- --hostname 127.0.0.1
 # PlaywrightとChromiumが利用可能な環境で実行
 # 外部にインストール済みの場合、PLAYWRIGHT_MODULEにそのindex.mjsの絶対パスを指定
 RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-navigation.e2e.mjs
+# 共通レイアウト・画面状態・モバイル幅・配色
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-layout.e2e.mjs
 ```
 
 直接アクセス・再読み込み・登録・編集・削除・キャンセル・入力エラー・404・不正ID・API異常・モバイル幅を検証します。これは画面とAPI中継のテストです。Go API・MySQLを使う結合確認は別途必要です。
+
+共通レイアウトのテストは、テスト専用APIの `/__test/state` で応答遅延・500・通信断・空一覧を再現し、最後に通常状態へ戻します。APIの既定URLは `http://127.0.0.1:18080`（`RECEIPT_TEST_API_URL` で変更可）。専用Chromiumがない場合は、インストール済みChromeを `PLAYWRIGHT_CHANNEL=chrome` で利用できます。
+
+画面はライト配色に統一しています。OSがダーク設定でも、背景・文字・日付入力などの標準部品が混在しないよう `color-scheme: light` を指定しています。テーマ切替UIは後続です。
 
 ブラウザの保存処理は `src/lib/receipt-client.ts` に集約し、JSONオブジェクトを送信します。失敗時は `ReceiptClientError.status` にHTTPステータスを保持します。
 

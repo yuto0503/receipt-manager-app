@@ -90,7 +90,54 @@ try {
     assert.equal(style.width, "3px");
     assert.ok(style.height >= 44);
   }
-  console.log("PASS: 共通レイアウト・ナビゲーション");
+  for (const colorScheme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme });
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(base + "/receipts/new");
+    await page.getByRole("button", { name: "保存する" }).click();
+    const colors = await page.evaluate(() => {
+      // Tailwindのoklch()もブラウザでsRGBへ変換してから比較する。
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d");
+      const rgb = color => {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+        const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+        return `rgb(${r}, ${g}, ${b})`;
+      };
+      const style = selector => {
+        const css = getComputedStyle(document.querySelector(selector));
+        return { color: rgb(css.color), background: rgb(css.backgroundColor) };
+      };
+      return { scheme: getComputedStyle(document.documentElement).colorScheme,
+        body: style("body"), panel: style(".panel"), input: style("input"),
+        textarea: style("textarea"), link: style("nav a"), error: style("#store_name-error") };
+    });
+    assert.equal(colors.scheme, "light");
+    assert.equal(colors.body.background, "rgb(248, 250, 252)");
+    for (const element of [colors.panel, colors.input, colors.textarea]) {
+      assert.equal(element.background, "rgb(255, 255, 255)");
+      assert.equal(element.color, "rgb(15, 23, 42)");
+    }
+    // 通常文字・リンク・エラー文の背景に対するコントラスト比を確認。
+    const luminance = rgb => rgb.match(/\d+/g).slice(0, 3).map(Number)
+      .map(n => n / 255).map(n => n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, n, i) => sum + n * [0.2126, 0.7152, 0.0722][i], 0);
+    for (const [foreground, background] of [
+      [colors.body.color, colors.body.background],
+      [colors.input.color, colors.input.background],
+      [colors.link.color, colors.panel.background],
+      [colors.error.color, colors.panel.background],
+    ]) {
+      const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      assert.ok((values[0] + 0.05) / (values[1] + 0.05) >= 4.5);
+    }
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: `/private/tmp/receipt-layout-${colorScheme}.png`, fullPage: true });
+  }
+  console.log("PASS: 共通レイアウト・メタ情報・リダイレクト・画面状態・エラー区別・モバイル・配色");
 } finally {
   await state("normal");
   await browser.close();

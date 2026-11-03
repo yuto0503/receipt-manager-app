@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    /* テーマ切替を導入するまでは、日付入力などの標準部品もライト配色に統一。 */
+    color-scheme: light;
+    background: #f8fafc;
+    color: #0f172a;
+  }
   body {
     background: #f8fafc;
     color: #0f172a;
