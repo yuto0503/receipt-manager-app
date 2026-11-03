@@ -31,6 +31,7 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [missing, setMissing] = useState(false);
   const sending = useRef(false);
   const cancel = receipt ? `/receipts/${receipt.id}` : "/receipts";
 
@@ -40,6 +41,7 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
     const result = parseReceiptInput(values);
     setErrors(result.errors);
     setMessage("");
+    setMissing(false);
     if (!result.input) {
       document.getElementById(Object.keys(result.errors)[0])?.focus();
       return;
@@ -52,6 +54,7 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
       window.location.assign(`/receipts/${saved.id}?saved=1`);
       return;
     } catch (error) {
+      setMissing(error instanceof ReceiptClientError && error.status === 404);
       setMessage(error instanceof ReceiptClientError ? error.message :
         "保存結果を確認できませんでした。通信状態と一覧を確認してから再操作してください。");
     }
@@ -66,7 +69,10 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
           {message}
         </p>
       )}
-      <fieldset disabled={pending} className="space-y-5">
+      {missing && (
+        <p role="alert">対象のレシートは削除されたか存在しません。<Link href="/receipts">一覧へ戻る</Link></p>
+      )}
+      <fieldset disabled={pending || missing} className="space-y-5">
         {(
           [
             ["store_name", "店名", "text"],
