@@ -11,6 +11,7 @@ export default async function ReceiptsPage() {
   } catch (error) {
     return (
       <ReceiptError
+        status={error instanceof ApiError ? error.status : undefined}
         message={
           error instanceof ApiError
             ? error.message

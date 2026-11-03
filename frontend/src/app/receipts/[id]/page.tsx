@@ -18,6 +18,7 @@ export default async function ReceiptPage({
     if (error instanceof ApiError && error.status === 404) notFound();
     return (
       <ReceiptError
+        status={error instanceof ApiError ? error.status : undefined}
         message={
           error instanceof ApiError ? error.message : "取得に失敗しました。"
         }

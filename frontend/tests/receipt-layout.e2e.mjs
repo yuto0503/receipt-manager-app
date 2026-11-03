@@ -49,6 +49,26 @@ try {
   await state("empty");
   await page.reload();
   await page.getByText("まだレシートがありません。新規登録から追加してください。").waitFor();
+  await state("normal");
+  for (const path of ["/receipts/9999", "/receipts/9999/edit"]) {
+    await page.goto(base + path);
+    await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
+    await page.getByRole("main").getByRole("link", { name: "一覧へ戻る" }).click();
+    await page.waitForURL("**/receipts");
+  }
+  for (const path of ["/receipts/abc", "/receipts/0/edit", "/receipts/-1"]) {
+    await page.goto(base + path);
+    await page.getByRole("heading", { name: "レシートの指定が正しくありません" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "再試行", exact: true }).count(), 0);
+    assert.ok((await page.getByRole("main").getByRole("alert").innerText()).includes("IDは1以上"));
+  }
+  for (const mode of ["error", "offline"]) {
+    await state(mode);
+    await page.goto(base + "/receipts/1");
+    await page.getByRole("heading", { name: "レシートを表示できません", exact: true }).waitFor();
+    await page.getByRole("button", { name: "再試行", exact: true }).waitFor();
+    assert.equal(await page.getByText("対象のレシートが見つかりません", { exact: true }).count(), 0);
+  }
   console.log("PASS: 共通レイアウト・ナビゲーション");
 } finally {
   await state("normal");
