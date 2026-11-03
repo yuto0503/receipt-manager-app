@@ -69,6 +69,27 @@ try {
     await page.getByRole("button", { name: "再試行", exact: true }).waitFor();
     assert.equal(await page.getByText("対象のレシートが見つかりません", { exact: true }).count(), 0);
   }
+  await state("normal");
+  for (const width of [320, 375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of ["/receipts", "/receipts/new", "/receipts/1", "/receipts/1/edit", "/receipts/9999", "/receipts/abc", "/receipts/500"]) {
+      await page.goto(base + path);
+      await page.locator("main h1").waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path + " at " + width);
+    }
+  }
+  await page.goto(base + "/receipts/new");
+  for (const selector of ['nav a[href="/receipts/new"]', '#store_name', 'button[type="submit"]']) {
+    const control = page.locator(selector);
+    await control.focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    assert.ok(await control.evaluate(el => el === document.activeElement));
+    const style = await control.evaluate(el => ({ outline: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth, height: el.getBoundingClientRect().height }));
+    assert.equal(style.outline, "solid");
+    assert.equal(style.width, "3px");
+    assert.ok(style.height >= 44);
+  }
   console.log("PASS: 共通レイアウト・ナビゲーション");
 } finally {
   await state("normal");
