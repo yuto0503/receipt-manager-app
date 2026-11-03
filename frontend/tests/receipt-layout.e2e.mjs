@@ -5,6 +5,9 @@ const base = process.env.RECEIPT_UI_TEST_URL;
 if (!base) throw new Error("RECEIPT_UI_TEST_URL を指定してください。");
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL });
 const page = await browser.newPage();
+page.setDefaultTimeout(15000);
+const mock = process.env.RECEIPT_TEST_API_URL || "http://127.0.0.1:18080";
+const state = (mode, delay = 0) => page.request.post(mock + "/__test/state", { data: { mode, delay } });
 try {
   const response = await page.request.get(base, { maxRedirects: 0 });
   assert.equal(response.status(), 307);
@@ -30,7 +33,24 @@ try {
     await nav.getByRole("link", { name: "一覧", exact: true }).click();
     await page.waitForURL("**/receipts");
   }
+  await state("normal", 1500);
+  await page.goto(base + "/receipts", { waitUntil: "commit" });
+  await page.getByRole("status").filter({ hasText: "レシートを読み込んでいます" }).waitFor();
+  await page.getByRole("heading", { name: "レシート一覧", exact: true }).waitFor();
+  await state("error");
+  await page.reload();
+  await page.getByRole("main").getByRole("alert").waitFor();
+  assert.equal(await page.getByText("internal", { exact: true }).count(), 0);
+  await state("normal", 1500);
+  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await page.getByRole("button", { name: "再試行中…" }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "再試行中…" }).isDisabled(), true);
+  await page.getByRole("heading", { name: "レシート一覧", exact: true }).waitFor();
+  await state("empty");
+  await page.reload();
+  await page.getByText("まだレシートがありません。新規登録から追加してください。").waitFor();
   console.log("PASS: 共通レイアウト・ナビゲーション");
 } finally {
+  await state("normal");
   await browser.close();
 }
