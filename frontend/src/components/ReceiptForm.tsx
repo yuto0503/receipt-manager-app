@@ -12,6 +12,14 @@ import {
 
 import { saveReceipt, ReceiptClientError } from "@/lib/receipt-client";
 
+const hints = {
+  store_name: "255文字以内。空白だけでは登録できません。",
+  price: "0〜2,147,483,647円の整数を入力してください。",
+  purchase_date: "1000〜9999年の日付を選択してください。",
+  category: "100文字以内で自由に入力できます。",
+  memo: "2,000文字以内。空白や改行もそのまま保存します。",
+};
+
 export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   const [values, setValues] = useState<ReceiptFormValues>({
     store_name: receipt?.store_name ?? "",
@@ -85,7 +93,7 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
                   setValues({ ...values, [key]: e.target.value })
                 }
                 aria-invalid={!!errors[key]}
-                aria-describedby={errors[key] ? `${key}-error` : undefined}
+                aria-describedby={`${key}-hint${errors[key] ? ` ${key}-error` : ""}`}
               />
             ) : (
               <input
@@ -101,9 +109,10 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
                   setValues({ ...values, [key]: e.target.value })
                 }
                 aria-invalid={!!errors[key]}
-                aria-describedby={errors[key] ? `${key}-error` : undefined}
+                aria-describedby={`${key}-hint${errors[key] ? ` ${key}-error` : ""}`}
               />
             )}
+            <p id={`${key}-hint`} className="mt-1 text-sm text-slate-600">{hints[key]}</p>
             {errors[key] && (
               <p id={`${key}-error`} className="mt-1 text-sm text-red-700">
                 {errors[key]}
