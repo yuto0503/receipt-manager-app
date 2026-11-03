@@ -49,7 +49,7 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
     try {
       const saved = await saveReceipt(result.input, receipt?.id);
       // 保存後はサーバーから最新の詳細を読み直す。
-      window.location.assign(`/receipts/${saved.id}`);
+      window.location.assign(`/receipts/${saved.id}?saved=1`);
       return;
     } catch (error) {
       setMessage(error instanceof ReceiptClientError ? error.message :

@@ -7,10 +7,13 @@ import { getReceipt } from "@/lib/receipts";
 
 export default async function ReceiptPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string | string[] }>;
 }) {
   const { id } = await params;
+  const { saved } = await searchParams;
   let receipt;
   try {
     receipt = await getReceipt(id);
@@ -28,6 +31,7 @@ export default async function ReceiptPage({
   return (
     <>
       <h1 className="mb-6">レシート詳細</h1>
+      {saved === "1" && <p role="status" className="panel mb-6">保存しました。</p>}
       <dl className="panel space-y-4">
         <div>
           <dt>店名</dt>

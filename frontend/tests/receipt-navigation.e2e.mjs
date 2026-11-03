@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL });
 const page = await browser.newPage();
 page.setDefaultTimeout(15000);
 page.setDefaultNavigationTimeout(15000);
@@ -45,7 +45,7 @@ try {
   await page.locator("#category").fill("食品");
   await page.locator("#memo").fill("確認用\nメモ");
   await page.getByRole("button", { name: "保存する" }).click();
-  await page.waitForURL(/\/receipts\/\d+$/);
+  await page.waitForURL(/\/receipts\/\d+(\?.*)?$/);
   const detail = page.url();
   await page.getByText("操作検証店", { exact: true }).waitFor();
   assert.ok((await page.locator("main").innerText()).includes("操作検証店"));
