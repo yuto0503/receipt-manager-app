@@ -92,3 +92,20 @@ APIのエラー文はReactのテキストとして表示します。空・欠落
 接続先のハードコードや既定値へのフォールバックはありません。`SERVER_API_BASE_URL` の未設定・空白・不正なURLは通信前に503として扱い、設定不足を初期取得画面に表示します。HTTP(S)のURLを指定し、認証情報・クエリ・フラグメントを含めないでください。実際の設定値はエラー表示に含めません。
 
 実設定の `.env`・`.env.*` はリポジトリ共通の `.gitignore` で除外し、設定例の `.env.example` のみ共有します。追跡確認はルートから `git ls-files '*env*'`、除外確認は `git check-ignore frontend/.env.local` で行えます。追跡解除は作業ディレクトリの実設定を削除しません。
+
+## 一覧・フォーム・登録・詳細・編集・削除の回帰確認
+
+上記のテスト専用APIとNext.jsを起動して、以下を順に実行します（同じテストデータを共有するため並列実行しません）。各テストで作成した架空のレシートは終了時に削除します。
+
+```sh
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-list.e2e.mjs
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-form.e2e.mjs
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-create.e2e.mjs
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-detail.e2e.mjs
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-edit.e2e.mjs
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 node tests/receipt-delete.e2e.mjs
+```
+
+`PLAYWRIGHT_MODULE`・`PLAYWRIGHT_CHANNEL` は既存の画面テストと同じ指定方法です。共通フォームでは日本・UTC・米国西海岸のタイムゾーンを検証します。これはモックAPIでの表示・送信確認であり、MySQLの日付保存の結合確認を代替しません。
+
+保存後は詳細URLに `?saved=1` を付け、保存完了の案内を表示します。編集・削除中に対象がなくなった場合は一覧へのリンクを表示します。削除確認はモーダルではなく画面内に展開し、Tabで実行ボタンへ進み、Escapeまたはキャンセルで閉じられます。

@@ -79,9 +79,11 @@ try {
   await page.waitForURL("**/receipts");
   assert.equal(await page.getByRole("link", { name: "更新検証店" }).count(), 0);
   await page.goto(detail);
+  await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
   assert.equal(await page.locator("h1").innerText(), "対象のレシートが見つかりません");
   for (const path of ["/receipts/9999", "/receipts/9999/edit"]) {
     await page.goto(base + path);
+    await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
     assert.equal(
       await page.locator("h1").innerText(),
       "対象のレシートが見つかりません",
