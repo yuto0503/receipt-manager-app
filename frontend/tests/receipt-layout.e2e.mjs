@@ -6,6 +6,12 @@ if (!base) throw new Error("RECEIPT_UI_TEST_URL を指定してください。")
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL });
 const page = await browser.newPage();
 try {
+  const response = await page.request.get(base, { maxRedirects: 0 });
+  assert.equal(response.status(), 307);
+  assert.equal(response.headers().location, "/receipts");
+  await page.goto(base);
+  await page.waitForURL("**/receipts");
+  await page.getByRole("heading", { name: "レシート一覧", exact: true }).waitFor();
   for (const [path, heading] of [
     ["/receipts", "レシート一覧"],
     ["/receipts/new", "レシートを登録"],
