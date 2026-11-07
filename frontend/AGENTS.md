@@ -14,3 +14,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 実設定の `.env`・`.env.*` は追跡せず、共有する設定は `.env.example` のダミー値のみとします。
 - 共通入力検証は `src/lib/receipt-input.ts`。購入日は暦日として扱い、表示時にタイムゾーン変換しないでください。
 - 入力検証の回帰テストはNode.js 24で `node --test tests/receipt-input.test.mjs`。画面テストの起動手順は `README.md` を参照し、必ずテスト専用APIに接続してください。
+- 実Go API・MySQLの受け入れ検証はルートの `ACCEPTANCE.md` に従い、独立した空DBで `node tests/receipt-acceptance.e2e.mjs <項目番号>` を実行してください。モックAPI向けテストと混同せず、作成したIDだけを削除してください。障害再現の `7-server-error`・`7-offline` は専用環境で実施し、記載の復旧手順まで行ってください。

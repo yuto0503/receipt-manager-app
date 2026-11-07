@@ -1,6 +1,8 @@
 # receipt-manager-app
 
-レシートの画像をアップロードして家計簿を自動生成するWebアプリ
+レシートを手入力で登録・閲覧・編集・削除できるWebアプリです。画像アップロード・OCRによる家計簿の自動生成は今後の拡張です。
+
+2026-11-07の実DBを使った受け入れ検証結果と再実行手順は [動作確認と完了判定](ACCEPTANCE.md) を参照してください。
 
 ## 起動・停止コマンド（Docker Compose）
 
@@ -299,10 +301,24 @@ docker compose start mysql backend frontend
 frontend/
 ├── src/
 │   ├── app/
-│   ├── components/
-│   ├── lib/
-│   └── types/
-├── tests/
+│   │   ├── page.tsx                 # / → /receipts
+│   │   ├── layout.tsx
+│   │   ├── globals.css
+│   │   ├── receipts/
+│   │   │   ├── page.tsx             # 一覧
+│   │   │   ├── new/page.tsx         # 登録
+│   │   │   ├── [id]/page.tsx        # 詳細・削除
+│   │   │   ├── [id]/edit/page.tsx   # 編集
+│   │   │   ├── loading.tsx
+│   │   │   ├── error.tsx
+│   │   │   └── not-found.tsx
+│   │   └── api/receipts/
+│   │       ├── route.ts             # POSTの中継
+│   │       └── [id]/route.ts        # PUT・DELETEの中継
+│   ├── components/                 # 共通フォーム・一覧・削除確認・エラー
+│   ├── lib/                        # API通信・入力検証
+│   └── types/                      # レシートの型
+├── tests/                          # 単体・モック画面・実DB受け入れテスト
 └── public/
 ```
 
