@@ -12,7 +12,7 @@
 - [x] 7. 不正IDの400、対象なしの404、APIの500、API停止時の通信失敗、送信中の二重操作を確認する。
 - [x] 8. スマートフォン幅・PC幅、キーボードのみの操作、ラベル・エラー・フォーカス・文字の読みやすさを確認する。
 - [x] 9. 入力検証や日付変換など回帰リスクのある処理には必要な自動テストを追加する。新たにテスト手段を導入した場合は実行コマンドを記録する。
-- [ ] 10. `cd frontend && npm run lint` を実行し、成功することを確認する。
+- [x] 10. `cd frontend && npm run lint` を実行し、成功することを確認する。
 - [ ] 11. `cd frontend && npm run build` を実行し、成功することを確認する。
 - [ ] 12. ブラウザのコンソール・ネットワークで、Reactの警告・未処理エラー・CORSエラーがないことを確認する。
 - [ ] 13. 起動手順・環境変数・実装済み画面を関連READMEへ反映する。既存の誤ったフロント構成例も、実装に合わせて `frontend/src/` 配下へ修正する。
@@ -97,3 +97,7 @@ docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot rece
 - `cd frontend && node --test tests/*.test.mjs`: 34件成功、失敗・スキップ0。既存のNode.jsモジュール種別推定警告あり（ブラウザのReact警告とは別）。
 - `cd backend && RECEIPT_TEST_MYSQL_DSN='root:verification@tcp(127.0.0.1:13306)/receipt_acceptance?parseTime=true' go test ./... -count=1`: 成功。DSN設定済みでMySQL統合テストも実行。
 - `cd backend && go vet ./...`: 成功。
+
+### 10. lint
+
+`cd frontend && npm run lint`: 終了コード0、警告・エラーなし。
