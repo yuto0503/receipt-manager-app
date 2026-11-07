@@ -136,6 +136,29 @@ try {
         assert.equal(stored.price, price);
       }
     }
+  } else if (step === '5') {
+    const record = await create(page);
+    ids.add(record.id);
+    for (const editing of [false, true]) {
+      const url = base + (editing ? `/receipts/${record.id}/edit` : '/receipts/new');
+      for (const character of ['あ', '😀']) {
+        await page.goto(url);
+        const before = await list();
+        for (const [key, limit] of [['store_name', 255], ['category', 100], ['memo', 2000]]) {
+          await fill(page, { [key]: character.repeat(limit + 1) });
+          await page.getByRole('button', { name: '保存する' }).click();
+          assert.equal(await page.locator('#' + key).getAttribute('aria-invalid'), 'true');
+        }
+        assert.deepEqual(await list(), before);
+        const data = { store_name: character.repeat(255), category: character.repeat(100), memo: character.repeat(2000) };
+        await fill(page, data);
+        const id = await save();
+        const stored = await (await page.request.get(api + '/receipts/' + id)).json();
+        for (const [key, value] of Object.entries(data)) assert.equal(stored[key], value);
+        await page.getByRole('link', { name: '編集する' }).click();
+        for (const [key, value] of Object.entries(data)) assert.equal(await page.locator('#' + key).inputValue(), value);
+      }
+    }
   } else {
     throw new Error('未定義の項目: ' + step);
   }
