@@ -9,7 +9,7 @@
 - [x] 4. 登録・編集の両方で必須項目の空欄・空白のみ、金額0・上限・負数・小数・上限超過を確認する。
 - [x] 5. 文字数の上限ちょうど・超過、日本語・絵文字を確認する。
 - [x] 6. 購入日の月末・年末・うるう日・年の上下限・不正日付と、タイムゾーンによる日付ずれを確認する。
-- [ ] 7. 不正IDの400、対象なしの404、APIの500、API停止時の通信失敗、送信中の二重操作を確認する。
+- [x] 7. 不正IDの400、対象なしの404、APIの500、API停止時の通信失敗、送信中の二重操作を確認する。
 - [ ] 8. スマートフォン幅・PC幅、キーボードのみの操作、ラベル・エラー・フォーカス・文字の読みやすさを確認する。
 - [ ] 9. 入力検証や日付変換など回帰リスクのある処理には必要な自動テストを追加する。新たにテスト手段を導入した場合は実行コマンドを記録する。
 - [ ] 10. `cd frontend && npm run lint` を実行し、成功することを確認する。
@@ -71,3 +71,17 @@ node tests/receipt-acceptance.e2e.mjs 1
 ### 6. 日付境界・タイムゾーン
 
 `node tests/receipt-acceptance.e2e.mjs 6` 成功。東京・UTC・米国西海岸で登録／編集し、月末・年末・うるう日・1000年・9999年の保存・再読込・編集値が一致。999年・10000年・平年2月29日・4月31日を拒否しDB不変。不正日付はChromeのdate要素が値を受け付けないため、テスト内でtext要素に切り替えてアプリ検証にも渡した。
+
+### 7. HTTPエラー・API停止・二重操作
+
+`node tests/receipt-acceptance.e2e.mjs 7` / `7-server-error` / `7-offline` 成功。GET・PUT・DELETEで不正ID400／対象なし404。登録・編集・削除の二重操作は各1リクエスト。500は専用DBの空テーブルを一時改名して実際のGo APIで発生させ、一覧のエラー表示・登録失敗時の入力保持・内部詳細非表示を確認。APIプロセスを停止し、一覧の通信エラーと登録中継の503を確認後に再起動。
+
+500の再現（ルートから実行、必ず最後に復元）:
+
+```sh
+docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot receipt_acceptance -e 'RENAME TABLE receipts TO receipts_verification_unavailable'
+# frontend/: node tests/receipt-acceptance.e2e.mjs 7-server-error
+docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot receipt_acceptance -e 'RENAME TABLE receipts_verification_unavailable TO receipts'
+```
+
+停止検証: この検証で起動したAPIを停止し `node tests/receipt-acceptance.e2e.mjs 7-offline` を実行。検証時は `lsof -nP -iTCP:8080 -sTCP:LISTEN` で起動したプロセスを確認して `kill -TERM`、上記起動コマンドで復帰した。既存の別用途APIには実行しない。

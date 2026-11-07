@@ -26,7 +26,8 @@ async function remove() {
   await page.getByRole('heading', { name: 'レシート一覧' }).waitFor();
 }
 try {
-  assert.deepEqual(await list(), [], '安全のため開始時に空のDBであることを要求します');
+  if (!['7-server-error', '7-offline'].includes(step))
+    assert.deepEqual(await list(), [], '安全のため開始時に空のDBであることを要求します');
   if (step === '1') {
     await page.goto(base + '/receipts');
     await page.getByRole('main').getByRole('link', { name: '新規登録' }).click();
@@ -194,6 +195,67 @@ try {
       }
       await context.close();
     }
+  } else if (step === '7') {
+    for (const id of ['abc', '0', '-1']) {
+      for (const method of ['GET', 'PUT', 'DELETE']) {
+        const response = await page.request.fetch(api + '/receipts/' + id, { method, data: {} });
+        assert.equal(response.status(), 400);
+      }
+      await page.goto(base + '/receipts/' + id);
+      assert.ok((await page.getByRole('main').getByRole('alert').innerText()).includes('IDは1以上'));
+    }
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      const response = await page.request.fetch(api + '/receipts/2147483647', { method, data: {
+        store_name: '存在しない検証店', price: 1, category: '検証', purchase_date: '2024-01-01T00:00:00Z',
+      } });
+      assert.equal(response.status(), 404);
+    }
+    await page.goto(base + '/receipts/2147483647');
+    await page.getByRole('heading', { name: '対象のレシートが見つかりません' }).waitFor();
+    let id;
+    for (const method of ['POST', 'PUT', 'DELETE']) {
+      await page.goto(base + (method === 'POST' ? '/receipts/new' : `/receipts/${id}${method === 'PUT' ? '/edit' : ''}`));
+      let count = 0;
+      await page.route('**/api/receipts{,/*}', async route => {
+        count++;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await route.continue();
+      });
+      if (method !== 'DELETE') {
+        await fill(page);
+        await page.locator('form').evaluate(form => { form.requestSubmit(); form.requestSubmit(); });
+        await page.getByRole('button', { name: '保存中…' }).waitFor();
+        assert.equal(await page.locator('#store_name').isDisabled(), true);
+        await page.waitForURL(/\/receipts\/\d+\?saved=1$/);
+        id = Number(new URL(page.url()).pathname.split('/').pop());
+        ids.add(id);
+        await page.getByRole('heading', { name: 'レシート詳細' }).waitFor();
+      } else {
+        await page.getByRole('button', { name: '削除する', exact: true }).click();
+        await page.getByRole('button', { name: '削除を実行' }).evaluate(button => { button.click(); button.click(); });
+        await page.getByRole('button', { name: '削除中…' }).waitFor();
+        assert.equal(await page.getByRole('button', { name: '削除中…' }).isDisabled(), true);
+        await page.waitForURL('**/receipts');
+      }
+      assert.equal(count, 1);
+      await page.unroute('**/api/receipts{,/*}');
+    }
+    assert.deepEqual(await list(), []);
+  } else if (['7-server-error', '7-offline'].includes(step)) {
+    if (step === '7-server-error') assert.equal((await page.request.get(api + '/receipts')).status(), 500);
+    else await assert.rejects(() => page.request.get(api + '/receipts', { timeout: 2000 }));
+    await page.goto(base + '/receipts');
+    await page.getByRole('main').getByRole('alert').waitFor();
+    assert.equal(await page.getByText('まだレシートがありません。新規登録から追加してください。').count(), 0);
+    await page.goto(base + '/receipts/new');
+    await fill(page);
+    const response = page.waitForResponse(r => r.url().endsWith('/api/receipts') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: '保存する' }).click();
+    assert.equal((await response).status(), step === '7-server-error' ? 500 : 503);
+    await page.getByRole('main').getByRole('alert').waitFor();
+    assert.equal(await page.locator('#store_name').inputValue(), '画面検証店');
+    assert.ok(!(await page.locator('main').innerText()).includes('SQL'));
+    assert.equal(await page.getByRole('button', { name: '保存する' }).isEnabled(), true);
   } else {
     throw new Error('未定義の項目: ' + step);
   }
