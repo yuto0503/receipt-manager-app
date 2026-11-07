@@ -256,6 +256,59 @@ try {
     assert.equal(await page.locator('#store_name').inputValue(), '画面検証店');
     assert.ok(!(await page.locator('main').innerText()).includes('SQL'));
     assert.equal(await page.getByRole('button', { name: '保存する' }).isEnabled(), true);
+  } else if (step === '8') {
+    const record = await create(page);
+    ids.add(record.id);
+    const tabTo = async locator => {
+      for (let i = 0; i < 45; i++) {
+        if (await locator.evaluate(el => el === document.activeElement)) return;
+        await page.keyboard.press('Tab');
+      }
+      assert.fail('Tabで到達できない要素');
+    };
+    for (const width of [320, 375, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of ['/receipts', '/receipts/new', `/receipts/${record.id}`, `/receipts/${record.id}/edit`]) {
+        await page.goto(base + path);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      }
+      await page.goto(base + '/receipts/new');
+      await tabTo(page.getByRole('button', { name: '保存する' }));
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#store_name').evaluate(el => el === document.activeElement), true);
+      for (const key of ['store_name', 'price', 'purchase_date', 'category', 'memo']) {
+        assert.ok(await page.locator('#' + key).evaluate(el => el.labels.length > 0));
+        const descriptions = (await page.locator('#' + key).getAttribute('aria-describedby')).split(' ');
+        for (const id of descriptions) assert.ok(await page.locator('#' + id).isVisible());
+      }
+      assert.ok(await page.locator('#store_name').evaluate(el => getComputedStyle(el).outlineStyle !== 'none'));
+      await page.screenshot({ path: `/private/tmp/receipt-acceptance-${width}.png`, fullPage: true });
+    }
+    await page.goto(base + '/receipts');
+    await tabTo(page.getByRole('link', { name: '画面検証店', exact: true }));
+    await page.keyboard.press('Enter');
+    await page.waitForURL(base + `/receipts/${record.id}`);
+    await tabTo(page.getByRole('link', { name: '編集する' }));
+    await page.keyboard.press('Enter');
+    await page.waitForURL(base + `/receipts/${record.id}/edit`);
+    await tabTo(page.locator('#store_name'));
+    await page.keyboard.press('Meta+A');
+    await page.keyboard.type('Keyboard verification');
+    await tabTo(page.getByRole('button', { name: '保存する' }));
+    await page.keyboard.press('Enter');
+    await page.waitForURL(/\?saved=1$/);
+    await page.getByText('Keyboard verification', { exact: true }).waitFor();
+    await tabTo(page.getByRole('button', { name: '削除する', exact: true }));
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.getByRole('button', { name: '削除を実行' }).evaluate(el => el === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByRole('button', { name: '削除する', exact: true }).evaluate(el => el === document.activeElement), true);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await page.waitForURL('**/receipts');
+    assert.deepEqual(await list(), []);
   } else {
     throw new Error('未定義の項目: ' + step);
   }
