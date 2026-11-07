@@ -44,6 +44,17 @@ Go APIへの通信は `src/lib/api.ts` の `apiRequest()` に集約していま�
 
 ## 検証
 
+実際のGo API・MySQLを使う受け入れ検証は [ACCEPTANCE.md](../ACCEPTANCE.md) を参照してください。専用の空DBで実行し、既存の個人データに接続しないでください。`tests/receipt-acceptance.e2e.mjs` は既存のPlaywright実行環境を使い、項目番号を指定して順番に実行します。
+
+```sh
+# ACCEPTANCE.mdの専用環境・環境変数を準備して実行（項目1〜8）
+node tests/receipt-acceptance.e2e.mjs 1
+# 通常の単体テスト一式（Node.js 24）
+node --test tests/*.test.mjs
+```
+
+`7-server-error` と `7-offline` は専用環境での障害再現が必要です。通常の項目と一括実行せず、ACCEPTANCE.mdの復旧手順まで実施してください。
+
 ```sh
 cd frontend
 npm run lint

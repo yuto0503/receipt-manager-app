@@ -292,7 +292,7 @@ try {
     await page.keyboard.press('Enter');
     await page.waitForURL(base + `/receipts/${record.id}/edit`);
     await tabTo(page.locator('#store_name'));
-    await page.keyboard.press('Meta+A');
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
     await page.keyboard.type('Keyboard verification');
     await tabTo(page.getByRole('button', { name: '保存する' }));
     await page.keyboard.press('Enter');
