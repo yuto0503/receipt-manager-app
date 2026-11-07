@@ -105,6 +105,37 @@ try {
     const memo = page.locator('dd').last();
     assert.equal(await memo.innerText(), long.memo);
     assert.equal(await memo.evaluate(el => getComputedStyle(el).whiteSpace), 'pre-wrap');
+  } else if (step === '4') {
+    const record = await create(page);
+    ids.add(record.id);
+    for (const editing of [false, true]) {
+      const url = base + (editing ? `/receipts/${record.id}/edit` : '/receipts/new');
+      await page.goto(url);
+      const before = await list();
+      let sent = 0;
+      const listener = request => { if (['POST', 'PUT'].includes(request.method())) sent++; };
+      page.on('request', listener);
+      for (const [key, value] of [
+        ['store_name', ''], ['store_name', ' 　\t'], ['category', ''], ['category', ' 　\t'],
+        ['purchase_date', ''], ['price', ''], ['price', ' '], ['price', '-1'], ['price', '1.5'], ['price', '2147483648'],
+      ]) {
+        await fill(page);
+        await page.locator('#' + key).fill(value);
+        await page.getByRole('button', { name: '保存する' }).click();
+        assert.equal(await page.locator('#' + key).getAttribute('aria-invalid'), 'true');
+        assert.equal(await page.locator('#' + key).evaluate(el => el === document.activeElement), true);
+      }
+      assert.equal(sent, 0);
+      page.off('request', listener);
+      assert.deepEqual(await list(), before);
+      for (const price of [0, 2147483647]) {
+        await page.goto(url);
+        await fill(page, { price });
+        const id = await save();
+        const stored = await (await page.request.get(api + '/receipts/' + id)).json();
+        assert.equal(stored.price, price);
+      }
+    }
   } else {
     throw new Error('未定義の項目: ' + step);
   }
