@@ -41,6 +41,46 @@ try {
     await remove();
     assert.deepEqual(await list(), []);
     assert.equal((await page.request.get(api + '/receipts/' + id)).status(), 404);
+  } else if (step === '2') {
+    const record = await create(page);
+    ids.add(record.id);
+    const detail = base + '/receipts/' + record.id;
+    for (const [url, heading] of [
+      [base + '/receipts', 'レシート一覧'],
+      [base + '/receipts/new', 'レシートを登録'],
+      [detail, 'レシート詳細'], [detail + '/edit', 'レシートを編集'],
+    ]) {
+      await page.goto(url);
+      await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+      await page.reload();
+      await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+    }
+    await page.goto(base + '/receipts');
+    await page.getByRole('link', { name: '画面検証店', exact: true }).click();
+    await page.waitForURL(detail);
+    await page.getByRole('link', { name: '編集する' }).click();
+    await page.waitForURL(detail + '/edit');
+    await page.goBack();
+    await page.getByRole('heading', { name: 'レシート詳細' }).waitFor();
+    await page.goForward();
+    await page.getByRole('heading', { name: 'レシートを編集' }).waitFor();
+    await page.locator('#store_name').fill('履歴更新店');
+    await save();
+    await page.reload();
+    await page.getByText('履歴更新店', { exact: true }).waitFor();
+    await page.goBack();
+    assert.equal(await page.locator('#store_name').inputValue(), '履歴更新店');
+    await page.goForward();
+    await page.getByText('履歴更新店', { exact: true }).waitFor();
+    await page.getByRole('link', { name: '一覧へ戻る' }).click();
+    await page.getByRole('link', { name: '履歴更新店', exact: true }).click();
+    await remove();
+    await page.goBack();
+    await page.getByRole('heading', { name: '対象のレシートが見つかりません' }).waitFor();
+    await page.goForward();
+    await page.getByText('まだレシートがありません。新規登録から追加してください。').waitFor();
+    await page.reload();
+    assert.equal(await page.locator('main ul li').count(), 0);
   } else {
     throw new Error('未定義の項目: ' + step);
   }
