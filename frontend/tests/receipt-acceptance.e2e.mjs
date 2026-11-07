@@ -6,6 +6,25 @@ const { browser, page } = await setup();
 const ids = new Set();
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
+const consoleIssues = [];
+const networkIssues = [];
+const mutations = [];
+const failedRequests = [];
+const statuses = new Map();
+if (step === '12') {
+  page.on('console', message => {
+    if (['warning', 'error'].includes(message.type())) consoleIssues.push(message.text());
+  });
+  page.on('requestfailed', request => failedRequests.push(request));
+  page.on('response', response => {
+    statuses.set(response.request(), response.status());
+    if (response.status() >= 400) networkIssues.push(`${response.status()} ${response.url()}`);
+    if (['POST', 'PUT', 'DELETE'].includes(response.request().method())) {
+      assert.equal(new URL(response.url()).origin, new URL(base).origin);
+      mutations.push([response.request().method(), response.status()]);
+    }
+  });
+}
 async function list() {
   const response = await page.request.get(api + '/receipts');
   assert.equal(response.status(), 200);
@@ -28,7 +47,7 @@ async function remove() {
 try {
   if (!['7-server-error', '7-offline'].includes(step))
     assert.deepEqual(await list(), [], '安全のため開始時に空のDBであることを要求します');
-  if (step === '1') {
+  if (step === '1' || step === '12') {
     await page.goto(base + '/receipts');
     await page.getByRole('main').getByRole('link', { name: '新規登録' }).click();
     await fill(page);
@@ -313,6 +332,19 @@ try {
     throw new Error('未定義の項目: ' + step);
   }
   assert.deepEqual(errors, []);
+  if (step === '12') {
+    for (const request of failedRequests) {
+      const aborted = request.failure()?.errorText === 'net::ERR_ABORTED';
+      const canceledRsc = request.method() === 'GET' && new URL(request.url()).searchParams.has('_rsc');
+      const completedDelete = request.method() === 'DELETE' && statuses.get(request) === 204;
+      // ページ遷移で中断するRSC取得と、204ヘッダー受信後の本文なしDELETEを区別する。
+      if (aborted && (canceledRsc || completedDelete)) continue;
+      networkIssues.push(`${request.method()} ${request.url()} ${request.failure()?.errorText}`);
+    }
+    assert.deepEqual(consoleIssues, []);
+    assert.deepEqual(networkIssues, []);
+    assert.deepEqual(mutations, [['POST', 201], ['PUT', 200], ['DELETE', 204]]);
+  }
   console.log(`PASS: acceptance ${step} (real Go API / MySQL)`);
 } finally {
   for (const id of ids) {

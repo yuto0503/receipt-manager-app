@@ -14,7 +14,7 @@
 - [x] 9. 入力検証や日付変換など回帰リスクのある処理には必要な自動テストを追加する。新たにテスト手段を導入した場合は実行コマンドを記録する。
 - [x] 10. `cd frontend && npm run lint` を実行し、成功することを確認する。
 - [x] 11. `cd frontend && npm run build` を実行し、成功することを確認する。
-- [ ] 12. ブラウザのコンソール・ネットワークで、Reactの警告・未処理エラー・CORSエラーがないことを確認する。
+- [x] 12. ブラウザのコンソール・ネットワークで、Reactの警告・未処理エラー・CORSエラーがないことを確認する。
 - [ ] 13. 起動手順・環境変数・実装済み画面を関連READMEへ反映する。既存の誤ったフロント構成例も、実装に合わせて `frontend/src/` 配下へ修正する。
 - [ ] 14. 本書に確認日・実行コマンド・結果・未実施事項を記録する。未実施の項目はチェックせず、理由を残す。
 
@@ -105,3 +105,9 @@ docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot rece
 ### 11. 本番ビルド
 
 `cd frontend && npm run build`: 終了コード0。Turbopackコンパイル・TypeScript検査・静的ページ生成成功。一覧・詳細・編集およびAPI中継は動的ルートとして出力。
+
+### 12. ブラウザコンソール・ネットワーク
+
+`node tests/receipt-acceptance.e2e.mjs 12` 成功。最新の本番ビルドを再起動し、CRUD操作中のconsole warning/error・pageerror・HTTPエラー・通信失敗を監視。React警告、未処理エラー、CORSエラーなし。同一オリジンへのPOST 201・PUT 200・DELETE 204を確認。
+
+画面遷移によるRSC取得中断と、204受信済みの本文なしDELETEの中断（`net::ERR_ABORTED`）は記録された。HTTP応答を照合して正常な遷移中断として区別し、それ以外の通信失敗は0件。故意に400／404／500／停止を発生させる項目7とは分けて正常操作を検証した。監視コード追加後の `npm run lint` も成功。
