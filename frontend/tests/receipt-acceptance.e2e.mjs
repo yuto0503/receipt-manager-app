@@ -81,6 +81,30 @@ try {
     await page.getByText('まだレシートがありません。新規登録から追加してください。').waitFor();
     await page.reload();
     assert.equal(await page.locator('main ul li').count(), 0);
+  } else if (step === '3') {
+    await page.goto(base + '/receipts');
+    await page.getByText('まだレシートがありません。新規登録から追加してください。').waitFor();
+    assert.equal(await page.locator('main ul li').count(), 0);
+    const first = await create(page, { memo: '' });
+    ids.add(first.id);
+    await page.reload();
+    assert.equal(await page.locator('main ul li').count(), 1);
+    await page.goto(base + '/receipts/' + first.id);
+    await page.getByText('メモなし', { exact: true }).waitFor();
+    const long = await create(page, { store_name: '店'.repeat(255), category: '分類'.repeat(50), memo: '一行目\n二行目\n😀三行目' });
+    ids.add(long.id);
+    await page.goto(base + '/receipts');
+    assert.equal(await page.locator('main ul li').count(), 2);
+    await page.getByRole('link', { name: long.store_name, exact: true }).waitFor();
+    for (const width of [320, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+    await page.goto(base + '/receipts/' + long.id);
+    assert.ok((await page.locator('dl').innerText()).includes(long.category));
+    const memo = page.locator('dd').last();
+    assert.equal(await memo.innerText(), long.memo);
+    assert.equal(await memo.evaluate(el => getComputedStyle(el).whiteSpace), 'pre-wrap');
   } else {
     throw new Error('未定義の項目: ' + step);
   }
