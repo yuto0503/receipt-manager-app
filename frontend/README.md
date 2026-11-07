@@ -24,6 +24,8 @@ npm run dev
 
 `http://localhost:3000` を開きます。接続先はサーバー専用です。初期取得はServer ComponentからGo APIへ、登録・更新・削除は同一オリジンの `/api/receipts` 経由で通信します。外部フォントのダウンロードは不要です。
 
+本番ビルドをローカルで確認する場合は `npm run build` の後に `npm run start` を実行します。Go APIの `DB_USER`・`DB_PASSWORD`・`DB_HOST`・`DB_PORT`・`DB_NAME` とMySQLの準備は [ルートREADME](../README.md) を参照してください。個人データを使わずに確認する場合は [専用検証環境](../ACCEPTANCE.md) を使います。
+
 ## 画面・遷移
 
 Go APIへの通信は `src/lib/api.ts` の `apiRequest()` に集約しています。`SERVER_API_BASE_URL`、10秒のタイムアウト、キャッシュ無効化、HTTPステータスとJSONエラーの解析を共通化しています。204は本文なしとして扱い、エラー本文がJSONでなくてもHTTPステータスを保持します。500系の内部エラー詳細は利用者に公開しません。
@@ -44,6 +46,17 @@ Go APIへの通信は `src/lib/api.ts` の `apiRequest()` に集約していま�
 
 ## 検証
 
+実際のGo API・MySQLを使う受け入れ検証は [ACCEPTANCE.md](../ACCEPTANCE.md) を参照してください。専用の空DBで実行し、既存の個人データに接続しないでください。`tests/receipt-acceptance.e2e.mjs` は既存のPlaywright実行環境を使い、項目番号を指定して順番に実行します。
+
+```sh
+# ACCEPTANCE.mdの専用環境・環境変数を準備して実行（項目1〜8）
+node tests/receipt-acceptance.e2e.mjs 1
+# 通常の単体テスト一式（Node.js 24）
+node --test tests/*.test.mjs
+```
+
+`7-server-error` と `7-offline` は専用環境での障害再現が必要です。通常の項目と一括実行せず、ACCEPTANCE.mdの復旧手順まで実施してください。
+
 ```sh
 cd frontend
 npm run lint
@@ -56,7 +69,7 @@ node --test tests/receipt-client.test.mjs
 node --test tests/receipts.test.mjs
 ```
 
-画面の自動テストは実データに接続しないテスト専用APIで実行します。以下を別々のターミナルで起動します。
+以下の既存画面テストは、実データに接続しないモックAPIで実行します。実DB受け入れテストとは接続先が異なります。以下を別々のターミナルで起動します。
 
 ```sh
 # frontendディレクトリで実行。データはメモリ内のみ

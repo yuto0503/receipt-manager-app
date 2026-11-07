@@ -31,12 +31,24 @@ test("購入日の境界と不正日付", () => {
     "10000-01-01",
     "2023-02-29",
     "2024-04-31",
+    "1900-02-29",
   ])
     assert.ok(
       parseReceiptInput({ ...base, purchase_date }).errors.purchase_date,
     );
-  for (const purchase_date of ["1000-01-01", "9999-12-31", "2024-02-29"])
+  for (const purchase_date of ["1000-01-01", "9999-12-31", "2024-02-29", "2000-02-29", "2024-04-30", "2024-12-31"])
     assert.ok(parseReceiptInput({ ...base, purchase_date }).input);
+});
+test("各テキスト項目の日本語・絵文字の上限と必須空白", () => {
+  for (const key of ["store_name", "category"])
+    for (const value of ["", " \t\n　", "\u0085"])
+      assert.ok(parseReceiptInput({ ...base, [key]: value }).errors[key]);
+  for (const [key, limit] of [["store_name", 255], ["category", 100], ["memo", 2000]]) {
+    for (const character of ["あ", "😀"]) {
+      assert.ok(parseReceiptInput({ ...base, [key]: character.repeat(limit) }).input);
+      assert.ok(parseReceiptInput({ ...base, [key]: character.repeat(limit + 1) }).errors[key]);
+    }
+  }
 });
 test("Go互換の空白判定とコードポイント数", () => {
   for (const store_name of ["", " \t\n　", "\u0085"])
