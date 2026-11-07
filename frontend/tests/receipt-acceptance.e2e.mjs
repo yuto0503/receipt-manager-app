@@ -11,12 +11,12 @@ async function list() {
   assert.equal(response.status(), 200);
   return response.json();
 }
-async function save() {
-  await page.getByRole('button', { name: '保存する', exact: true }).click();
-  await page.waitForURL(/\/receipts\/\d+\?saved=1$/);
-  const id = Number(new URL(page.url()).pathname.split('/').pop());
+async function save(target = page) {
+  await target.getByRole('button', { name: '保存する', exact: true }).click();
+  await target.waitForURL(/\/receipts\/\d+\?saved=1$/);
+  const id = Number(new URL(target.url()).pathname.split('/').pop());
   ids.add(id);
-  await page.getByRole('heading', { name: 'レシート詳細' }).waitFor();
+  await target.getByRole('heading', { name: 'レシート詳細' }).waitFor();
   return id;
 }
 async function remove() {
@@ -158,6 +158,41 @@ try {
         await page.getByRole('link', { name: '編集する' }).click();
         for (const [key, value] of Object.entries(data)) assert.equal(await page.locator('#' + key).inputValue(), value);
       }
+    }
+  } else if (step === '6') {
+    for (const timezoneId of ['Asia/Tokyo', 'UTC', 'America/Los_Angeles']) {
+      const context = await browser.newContext({ timezoneId });
+      const target = await context.newPage();
+      target.setDefaultTimeout(15000);
+      target.on('pageerror', error => errors.push(error.message));
+      const record = await create(target);
+      ids.add(record.id);
+      for (const editing of [false, true]) {
+        const url = base + (editing ? `/receipts/${record.id}/edit` : '/receipts/new');
+        for (const date of ['2024-04-30', '2024-12-31', '2024-02-29', '1000-01-01', '9999-12-31']) {
+          await target.goto(url);
+          await fill(target, { purchase_date: date });
+          const id = await save(target);
+          assert.ok((await target.locator('dl').innerText()).includes(date));
+          const stored = await (await target.request.get(api + '/receipts/' + id)).json();
+          assert.equal(stored.purchase_date.slice(0, 10), date);
+          await target.reload();
+          await target.getByRole('link', { name: '編集する' }).click();
+          assert.equal(await target.locator('#purchase_date').inputValue(), date);
+        }
+        await target.goto(url);
+        const before = await list();
+        for (const date of ['0999-12-31', '10000-01-01', '2023-02-29', '2024-04-31']) {
+          await fill(target);
+          // date要素が入力できない不正文字列もアプリの検証へ渡して確認する。
+          await target.locator('#purchase_date').evaluate(el => { el.type = 'text'; });
+          await target.locator('#purchase_date').fill(date);
+          await target.getByRole('button', { name: '保存する' }).click();
+          assert.equal(await target.locator('#purchase_date').getAttribute('aria-invalid'), 'true');
+        }
+        assert.deepEqual(await list(), before);
+      }
+      await context.close();
     }
   } else {
     throw new Error('未定義の項目: ' + step);
