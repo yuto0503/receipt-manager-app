@@ -113,6 +113,8 @@ docker compose start mysql backend frontend
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
+`workflow_dispatch` による手動起動も定義しています。手動起動の動作確認は、このワークフローをデフォルトブランチへ取り込んだ後に行います。
+
 ## 技術スタック
 
 ### Frontend
