@@ -17,7 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Keep these check names stable; do not reuse them in other workflows.
   frontend:
+    name: frontend
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -35,6 +37,7 @@ jobs:
         run: echo 'Common settings only; frontend checks are not implemented yet.'
 
   backend:
+    name: backend
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
