@@ -25,6 +25,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          # Dependency caching is configured with the frontend checks later.
+          package-manager-cache: false
       - name: Report implementation stage
         run: echo 'Common settings only; frontend checks are not implemented yet.'
 
@@ -36,5 +42,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          # Dependency caching is configured with the backend checks later.
+          cache: false
       - name: Report implementation stage
         run: echo 'Common settings only; backend checks are not implemented yet.'
