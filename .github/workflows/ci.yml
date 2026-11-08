@@ -1,7 +1,8 @@
 name: CI
 
-# Temporary trigger while the common workflow settings are assembled.
-on: workflow_call
+on:
+  push:
+    branches: ['**']
 
 jobs:
   frontend:
