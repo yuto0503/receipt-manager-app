@@ -107,6 +107,12 @@ docker compose start mysql backend frontend
 
 `stop` ではDBのデータは残ります。設定や依存関係を変更した場合は、再度 `docker compose up -d --build mysql backend frontend` を実行してください。
 
+## CI
+
+[CIワークフロー](.github/workflows/ci.yml) の共通設定を導入中です。現在のジョブは設定の雛形であり、lint・テスト・ビルドはまだ実行しません。ジョブの成功をアプリの検証完了と扱わないでください。
+
+全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
+
 ## 技術スタック
 
 ### Frontend

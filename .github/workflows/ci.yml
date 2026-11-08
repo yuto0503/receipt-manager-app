@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: ['**']
+  pull_request:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened]
 
 jobs:
   frontend:
