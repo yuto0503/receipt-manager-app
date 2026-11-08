@@ -1,5 +1,6 @@
 name: CI
 
+# Do not add paths/paths-ignore: required PR checks must always be reported.
 on:
   push:
     branches: ['**']
