@@ -1,0 +1,17 @@
+name: CI
+
+# Temporary trigger while the common workflow settings are assembled.
+on: workflow_call
+
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report implementation stage
+        run: echo 'Common settings only; frontend checks are not implemented yet.'
+
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report implementation stage
+        run: echo 'Common settings only; backend checks are not implemented yet.'
