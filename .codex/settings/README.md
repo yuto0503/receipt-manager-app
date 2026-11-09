@@ -21,3 +21,13 @@
 信頼されたプロジェクトで設定が読み込まれます。変更後は新しいセッションで有効なPermissionsを確認してください。起動時の上書きや管理環境の制約が優先されるため、このファイルの編集だけで現在のセッションの権限が変わったとは判断しません。承認の担当者は別設定の `approvals_reviewer` にも依存します（このプロジェクトでは未指定）。
 
 設定キーの参照: https://learn.chatgpt.com/docs/config-file/config-reference
+
+## ローカルコミットの承認
+
+- `.codex/rules/local-commits.rules` は、信頼されたこのプロジェクトで `git add` と通常の `git commit -m` を追加確認なしで実行するためのルールです。
+- `config.toml` のサンドボックスや承認モードを全面的に緩めず、対象コマンドだけを許可します。pushや履歴書き換えの許可は追加しません。
+- 作業方針は `.codex/AGENTS.md` に記載します。AGENTS.mdへの記載だけではOSの書き込み制限は解除されません。
+- ルールはCodexの起動時に読み込まれます。追加後はCodexを再起動してください。プロジェクトの信頼設定と、利用環境・管理者のポリシーが優先されます。
+- 検証例: `codex execpolicy check --pretty --rules .codex/rules/local-commits.rules -- git commit -m update`。これはコマンドを実行せず許可判定だけを確認します。
+
+公式資料: https://learn.chatgpt.com/docs/agent-configuration/rules

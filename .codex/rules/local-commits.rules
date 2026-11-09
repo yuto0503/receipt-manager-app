@@ -1,0 +1,13 @@
+# Allow staging and ordinary local commits for this trusted project.
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "allow",
+    match = ["git add README.md", "git add -- .github/workflows/ci.yml"],
+    not_match = ["git push origin feature/ci", "git reset --hard"],
+)
+prefix_rule(
+    pattern = ["git", "commit", "-m"],
+    decision = "allow",
+    match = ["git commit -m update"],
+    not_match = ["git commit --amend", "git push origin feature/ci"],
+)
