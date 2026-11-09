@@ -109,7 +109,7 @@ docker compose start mysql backend frontend
 
 ## CI
 
-[CIワークフロー](.github/workflows/ci.yml) の共通設定を導入中です。現在のジョブは設定の雛形であり、lint・テスト・ビルドはまだ実行しません。ジョブの成功をアプリの検証完了と扱わないでください。
+[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・lint・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブはまだ環境準備のみです。GitHub上の実行成功は未確認です。
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
@@ -121,7 +121,9 @@ docker compose start mysql backend frontend
 
 ジョブID・表示名は `frontend`・`backend` に固定し、他ワークフローで同名チェックを作りません。両ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトは各15分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
 
-Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。依存キャッシュ・検査コマンド・MySQL統合テストの追加、およびGitHub上の実行確認と必須チェックの設定は後続作業です。
+Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendの検査・MySQL統合テストの追加、およびGitHub上の実行確認と必須チェックの設定は後続作業です。
+
+frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面を利用する際にはAPIの接続設定が必要です。[ローカルでの検証手順](frontend/README.md#ciと同じ検証)を参照してください。
 
 ## 技術スタック
 

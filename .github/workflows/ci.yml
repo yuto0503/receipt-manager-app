@@ -48,7 +48,10 @@ jobs:
       - name: Unit tests
         run: node --test tests/*.test.mjs
       - name: Build
+        # No Go API or .env files are needed at build time.
         run: npm run build
+      - name: Check dynamic receipt page
+        run: node tests/check-build.mjs
 
   backend:
     name: backend
