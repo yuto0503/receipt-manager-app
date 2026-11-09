@@ -47,6 +47,8 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: node --test tests/*.test.mjs
+      - name: Build
+        run: npm run build
 
   backend:
     name: backend
