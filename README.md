@@ -109,7 +109,7 @@ docker compose start mysql backend frontend
 
 ## CI
 
-[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・lint・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブはまだ環境準備のみです。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境でfrontendの全ステップ成功を確認しました。
+[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・lint・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境でfrontendの全ステップ成功を確認しました。
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
@@ -121,11 +121,32 @@ docker compose start mysql backend frontend
 
 ジョブID・表示名は `frontend`・`backend` に固定し、他ワークフローで同名チェックを作りません。両ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトは各15分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
 
-Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendの検査・MySQL統合テストの追加、およびGitHub上の実行確認と必須チェックの設定は後続作業です。
+Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendのGitHub上の実行確認と必須チェックの設定は後続作業です。
 
 検証記録（実装コミット `0cacb7ad`）: [pushの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716208448)、[PRの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716216868)。lint・単体テスト・ビルドの失敗は終了コードでジョブへ伝え、成功扱いにしません。
 
 frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面を利用する際にはAPIの接続設定が必要です。[ローカルでの検証手順](frontend/README.md#ciと同じ検証)を参照してください。
+
+### backendの検証
+
+backendジョブは `backend/` で、DSNの空チェック → `go mod download` → `gofmt -l .` の結果が空であることの検査 → `go vet ./...` → `go test -v ./... -count=1` → `go build ./...` を順に実行します。整形は検査のみで、自動修正しません。検査の非0終了はそのままジョブの失敗になります。
+
+MySQL 8.4はジョブ専用のサービスコンテナです。DBは `receipt_ci`、接続先はランナーから `127.0.0.1:3306`。CI専用のダミー認証情報を使用し、開発DBや実設定の.envは使いません。TCP接続・認証・対象DBへの `SELECT 1` をhealth checkで確認します（間隔10秒、タイムアウト5秒、12回、起動猶予30秒）。サービスが起動しない、またはhealthyにならない場合はジョブを開始できず失敗します。
+
+`RECEIPT_TEST_MYSQL_DSN` はジョブで明示し、未設定による統合テストのスキップを防ぎます。統合テストは単一接続の一時テーブルにマイグレーションを適用するため、別途 `make migrate-up` は不要です。Actionsログの `TestReceiptMySQLIntegration` のPASSを確認してください。Go APIプロセスは起動しません。
+
+2026-11-11のローカル検証（Go 1.26.3、専用MySQL 8.4.11）:
+
+- 依存取得・整形検査・静的検査・全テスト・ビルドが成功。`TestReceiptMySQLIntegration` はSKIPせずPASS。
+- 誤ったダミーパスワードと専用DB停止の両方で、CIと同じ `go test -v ./... -count=1` が終了コード1。
+- 別の一時コンテナに無効なMySQL起動オプションを渡すと終了コード1。これはローカルの起動失敗確認であり、GitHubランナーでのサービス起動失敗検証は未実施。
+- CIから取り出したコマンドで、空DSNと未整形Goファイルを終了コード1として検出。
+- `actionlint` 1.7.12、Ruby/PsychのYAML読み込み、`git diff --check` が成功。
+- ローカルのビルドはPATH上のGitの実行形式エラーを避けるため `/usr/bin/git` を使用。CIのコマンドは変更していません。
+
+backendのGitHub Actions上での成功・故意の失敗の検証は未実施です。ローカルの成功と区別して、今後のpush・PR検証で確認します。
+
+設定仕様: [setup-goのキャッシュ](https://github.com/actions/setup-go#caching-dependency-files-and-build-outputs)、[GitHubのサービスコンテナ](https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers)。
 
 ## 技術スタック
 
