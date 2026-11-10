@@ -65,6 +65,12 @@ jobs:
     name: backend
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+        shell: bash
+    env:
+      RECEIPT_TEST_MYSQL_DSN: root:ci-password@tcp(127.0.0.1:3306)/receipt_ci?parseTime=true
     services:
       mysql:
         image: mysql:8.4
@@ -90,5 +96,5 @@ jobs:
           go-version-file: backend/go.mod
           cache: true
           cache-dependency-path: backend/go.sum
-      - name: Report implementation stage
-        run: echo 'Common settings only; backend checks are not implemented yet.'
+      - name: Verify integration test configuration
+        run: test -n "$RECEIPT_TEST_MYSQL_DSN"
