@@ -71,6 +71,8 @@ jobs:
         env:
           MYSQL_DATABASE: receipt_ci
           MYSQL_ROOT_PASSWORD: ci-password
+        ports:
+          - 3306:3306
         options: >-
           --health-cmd="mysql --protocol=TCP -h 127.0.0.1 -uroot -pci-password receipt_ci -e 'SELECT 1'"
           --health-interval=10s
