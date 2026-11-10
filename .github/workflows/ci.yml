@@ -71,6 +71,12 @@ jobs:
         env:
           MYSQL_DATABASE: receipt_ci
           MYSQL_ROOT_PASSWORD: ci-password
+        options: >-
+          --health-cmd="mysql --protocol=TCP -h 127.0.0.1 -uroot -pci-password receipt_ci -e 'SELECT 1'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+          --health-start-period=30s
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
