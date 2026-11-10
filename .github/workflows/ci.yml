@@ -107,3 +107,5 @@ jobs:
             printf '%s\n' "$unformatted"
             exit 1
           fi
+      - name: Vet
+        run: go vet ./...
