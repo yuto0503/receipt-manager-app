@@ -98,3 +98,5 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Verify integration test configuration
         run: test -n "$RECEIPT_TEST_MYSQL_DSN"
+      - name: Download dependencies
+        run: go mod download
