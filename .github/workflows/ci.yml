@@ -74,7 +74,7 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
-          # Dependency caching is configured with the backend checks later.
-          cache: false
+          cache: true
+          cache-dependency-path: backend/go.sum
       - name: Report implementation stage
         run: echo 'Common settings only; backend checks are not implemented yet.'
