@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import ReceiptList from "@/components/ReceiptList";
 import ReceiptError from "@/components/ReceiptError";
 import { ApiError } from "@/lib/api";
 import { getReceipts } from "@/lib/receipts";
 
 export default async function ReceiptsPage() {
+  // API接続先は実行時に評価し、設定不足の画面をビルド時に固定しない。
+  await connection();
   let receipts;
   try {
     receipts = await getReceipts();

@@ -44,6 +44,29 @@ Go APIへの通信は `src/lib/api.ts` の `apiRequest()` に集約していま�
 
 各URLへの直接アクセス・再読み込みに対応します。対象なし、不正ID、通信失敗はエラー表示と一覧への導線を用意しています。保存・削除成功後はページを読み直し、最新データを取得します。バックエンドの契約・入力制約はルートのREADMEを参照してください。
 
+## CIと同じ検証
+
+Node.js 24系を使い、frontendディレクトリで次の順に実行します。
+
+```sh
+cd frontend
+node --version
+npm --version
+npm ci
+npm run lint
+node --test tests/*.test.mjs
+npm run build
+node tests/check-build.mjs
+```
+
+CIはnpmのダウンロードキャッシュだけを利用し、`node_modules`・`.next` は再利用しません。`npm ci` はlockfileとpackage.jsonが不整合なら失敗します。`npm test` スクリプトはありません。
+
+各検査を独立したステップで実行し、非0の終了コードをそのままCIの失敗にします。`continue-on-error` や `|| true` で失敗を無視しません。Actionsのfrontendジョブで、失敗したステップ名とログを確認してください。
+
+これらの検証に `.env`・`.env.local`・`SERVER_API_BASE_URL`・Go API・MySQLは不要です。設定なしでの確認は実設定を消さず、Git管理対象ファイルだけを別ディレクトリへコピーして行ってください。一覧ページは `connection()` でリクエスト時に描画し、接続先未設定のエラー画面をビルド結果に固定しません。`check-build.mjs` が一覧の静的生成を検出した場合は非0終了します。
+
+アプリ起動後の画面操作にはAPIの接続設定が必要です。上記の検証はブラウザ操作や実DBの統合検証を含みません。CIはubuntu-24.04上のNode.js 24を使用します。既存DockerfileのNode.js 22との整合は後続課題です。
+
 ## 検証
 
 実際のGo API・MySQLを使う受け入れ検証は [ACCEPTANCE.md](../ACCEPTANCE.md) を参照してください。専用の空DBで実行し、既存の個人データに接続しないでください。`tests/receipt-acceptance.e2e.mjs` は既存のPlaywright実行環境を使い、項目番号を指定して順番に実行します。

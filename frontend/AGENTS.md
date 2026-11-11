@@ -6,6 +6,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 画面と通信
 
+- CIのfrontendジョブはNode.js 24で `npm ci`、`npm run lint`、`node --test tests/*.test.mjs`、`npm run build`、`node tests/check-build.mjs` を順に実行します。ビルドにはGo API・MySQL・実設定の.envは不要です。
+- 一覧ページはAPI取得のtry/catchより前に `await connection()` を呼び、実行時に描画します。接続先未設定時のエラー画面を静的生成しないため、ビルド後に `node tests/check-build.mjs` で確認してください。
+
 - ページの初期取得はServer Componentから `src/lib/receipts.ts` を使います。フォーム・削除確認はClient Componentです。
 - 登録・更新・削除は `src/app/api/receipts/` のRoute Handlerを通します。Go APIの接続先はサーバー専用の `SERVER_API_BASE_URL` に集約してください。
 - 中継先は `POST /receipts` と `PUT・DELETE /receipts/:id` に限定し、リダイレクトを追跡しないでください。中継の回帰テストはNode.js 24で `node --test tests/receipt-proxy.test.mjs`。
