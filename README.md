@@ -113,7 +113,7 @@ docker compose start mysql backend frontend
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
-`workflow_dispatch` による手動起動も定義しています。手動起動の動作確認は、このワークフローをデフォルトブランチへ取り込んだ後に行います。
+`workflow_dispatch` による手動起動も定義しています。2026-11-12にPR #17をデフォルトブランチ `develop` へ取り込み、手動起動の成功を確認しました（下記の検証記録を参照）。
 
 変更ファイルのパスによる実行省略は行いません。文書だけを変更したPRでもチェックを報告し、必須チェックが実行されず待機し続ける事態を防ぎます。
 
@@ -121,7 +121,7 @@ docker compose start mysql backend frontend
 
 ジョブID・表示名は `frontend`・`backend` に固定し、他ワークフローで同名チェックを作りません。両ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトは各15分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
 
-Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendのGitHub上の実行確認と必須チェックの設定は後続作業です。
+Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendもGitHub上で実行成功を確認済みです。必須チェックの設定は後続作業です。
 
 検証記録（実装コミット `0cacb7ad`）: [pushの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716208448)、[PRの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716216868)。lint・単体テスト・ビルドの失敗は終了コードでジョブへ伝え、成功扱いにしません。
 
@@ -144,7 +144,20 @@ MySQL 8.4はジョブ専用のサービスコンテナです。DBは `receipt_ci
 - `actionlint` 1.7.12、Ruby/PsychのYAML読み込み、`git diff --check` が成功。
 - ローカルのビルドはPATH上のGitの実行形式エラーを避けるため `/usr/bin/git` を使用。CIのコマンドは変更していません。
 
-backendのGitHub Actions上での成功・故意の失敗の検証は未実施です。ローカルの成功と区別して、今後のpush・PR検証で確認します。
+backendのGitHub Actions上での成功は以下の記録で確認済みです。GitHub上で故意に失敗させる検証は未実施です。
+
+### ローカル確認・GitHub上の動作確認（2026-11-12）
+
+検証対象は `84648784`、PR #17のマージコミットは `32f164e5` です。元の「5.」のチェックリスト本文は取得できていないため、確認できた項目をここに記録します。
+
+- [x] 実設定を含まない一時コピーでfrontendの `npm ci`・lint・単体テスト34件・本番ビルド・動的描画検査が成功。Node.js 24.11.0、npm 11.6.1。
+- [x] Goの依存取得・整形検査・静的検査・全テスト・ビルドが成功。専用MySQLで `TestReceiptMySQLIntegration` がSKIPせずPASS。検証用コンテナは停止済み。
+- [x] YAML構文読み込みと `git diff --check` が成功。
+- [x] 同じ対象コミットの[push](https://github.com/yuto0503/receipt-manager-app/actions/runs/42919425262)・[PR](https://github.com/yuto0503/receipt-manager-app/actions/runs/42919628129)のCI成功を確認。
+- [x] [PR #17](https://github.com/yuto0503/receipt-manager-app/pull/17)を `develop` へマージし、[導入後のpush CI](https://github.com/yuto0503/receipt-manager-app/actions/runs/43115419486)の成功を確認。
+- [x] デフォルトブランチへ導入後、[手動起動](https://github.com/yuto0503/receipt-manager-app/actions/runs/43115473320)も成功することを確認する。
+
+`npm ci` は成功しましたが、依存監査は17件（moderate 8、high 8、critical 1）を報告しました。依存の修正は今回の検証に含めていません。
 
 設定仕様: [setup-goのキャッシュ](https://github.com/actions/setup-go#caching-dependency-files-and-build-outputs)、[GitHubのサービスコンテナ](https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers)。
 
