@@ -144,11 +144,11 @@ MySQL 8.4はジョブ専用のサービスコンテナです。DBは `receipt_ci
 - `actionlint` 1.7.12、Ruby/PsychのYAML読み込み、`git diff --check` が成功。
 - ローカルのビルドはPATH上のGitの実行形式エラーを避けるため `/usr/bin/git` を使用。CIのコマンドは変更していません。
 
-backendのGitHub Actions上での成功は以下の記録で確認済みです。GitHub上で故意に失敗させる検証は未実施です。
+backendのGitHub Actions上での成功に加え、2026-11-13に故意のテスト失敗の検出と修正後の復旧も確認しました。下記の実行記録を参照してください。
 
 ### ローカル確認・GitHub上の動作確認（2026-11-12）
 
-検証対象は `84648784`、PR #17のマージコミットは `32f164e5` です。ローカル文書 `local_docs/ci-tasks.md` 第5節の実施済み8項目にチェック済みです。別ブランチ／PRでの意図的な失敗と修正後の復旧確認の2項目は未実施のため、第5節全体は未完了です。
+検証対象は `84648784`、PR #17のマージコミットは `32f164e5` です。ローカル文書 `local_docs/ci-tasks.md` 第5節は、2026-11-13の失敗・復旧検証を含めて全10項目にチェック済みです。
 
 - [x] 実設定を含まない一時コピーでfrontendの `npm ci`・lint・単体テスト34件・本番ビルド・動的描画検査が成功。Node.js 24.11.0、npm 11.6.1。
 - [x] Goの依存取得・整形検査・静的検査・全テスト・ビルドが成功。専用MySQLで `TestReceiptMySQLIntegration` がSKIPせずPASS。検証用コンテナは停止済み。
@@ -160,6 +160,20 @@ backendのGitHub Actions上での成功は以下の記録で確認済みです�
 `npm ci` は成功しましたが、依存監査は17件（moderate 8、high 8、critical 1）を報告しました。依存の修正は今回の検証に含めていません。
 
 設定仕様: [setup-goのキャッシュ](https://github.com/actions/setup-go#caching-dependency-files-and-build-outputs)、[GitHubのサービスコンテナ](https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers)。
+
+### CIの失敗・復旧検証（2026-11-13）
+
+検証ブランチ `verify/ci-failure-recovery-20261113` と [Draft PR #19](https://github.com/yuto0503/receipt-manager-app/pull/19) を使用しました。CI設定は変更せず、次の2つのテストを一時追加しました。
+
+- frontend: `frontend/tests/ci-failure-probe.test.mjs` の `assert.fail()`。`Unit tests` で `CI_FAILURE_PROBE_FRONTEND` と終了コード1を確認（既存34件は成功、検証用1件だけ失敗）。
+- backend: `backend/internal/handler/ci_failure_probe_test.go` の `TestCIFailureProbe` に `t.Fatal()`。`Unit and MySQL integration tests` で `CI_FAILURE_PROBE_BACKEND` と終了コード1を確認。MySQL統合テスト自体はPASS。
+
+| 対象コミット | push実行 | PR実行 | frontend / backend |
+| --- | --- | --- | --- |
+| 失敗用 `b90037b3` | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323420325) | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323478031) | 両方failure。失敗後のBuildはskip |
+| 修正後 `ad2ac3d7` | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323739081) | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323746277) | 両方success。frontend 34件成功、MySQL統合テストPASS、ビルド成功 |
+
+修正は通常の追加コミットで検証用2ファイルを削除し、同じブランチへ再pushしました。`git diff --exit-code 32f164e551a2676f30ca41993ad94660b9da64f1 HEAD` が終了コード0となり、修正後のファイル内容が検証開始前のdevelopと一致することを確認済みです。PR #19は `closed`・`merged: false` を確認し、失敗用変更はdevelopへ取り込んでいません。CIがテストの非0終了を検出することと、修正コミットで正常に戻ることをそれぞれ検証しました。lint・ビルド自体の故意の失敗やマージ保護ルールの検証は今回の範囲外です。
 
 ## 技術スタック
 
