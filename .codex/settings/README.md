@@ -31,3 +31,12 @@
 - 検証例: `codex execpolicy check --pretty --rules .codex/rules/local-commits.rules -- git commit -m update`。これはコマンドを実行せず許可判定だけを確認します。
 
 公式資料: https://learn.chatgpt.com/docs/agent-configuration/rules
+
+## GitHubの読み取り操作の承認
+
+- `.codex/rules/github-readonly.rules` は、`gh auth status`、`gh repo view`、PRのview/list/checks/diff/status、CI実行のview/list/watch、workflowのview/list、issueのview/list/statusを追加確認なしで許可します。
+- リポジトリ指定の有無にかかわらず、上記サブコマンドに適用します。GitHubで認証済みのアカウントがアクセスできる範囲を読み取れます。
+- PRの作成・マージ・クローズ、設定変更、CI再実行などの変更操作は、このルールでは許可しません。既存のネットワーク制限と承認方針は維持します。
+- `gh api` は読み取りにも使用できますが、このルールの対象外です。GET指定の後に別のメソッドを追加でき、GraphQLにも更新操作があるため、コマンドの先頭だけで読み取り専用と保証できません。保護ルール等をAPIで調査するときは承認が残ります。
+- 信頼済みプロジェクトでCodexを再起動すると読み込まれます。現在のセッションや管理ポリシーの権限は、このファイルを編集しても変わりません。他の場所に広い許可ルールがある場合、それを取り消す設定ではありません。
+- 検証例: `codex execpolicy check --pretty --rules .codex/rules/github-readonly.rules -- gh pr checks 21 --required`。変更操作は同じ方法で `gh pr merge 21` 等に置き換え、allowにならないことを確認します。

@@ -113,7 +113,7 @@ docker compose start mysql backend frontend
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
-`workflow_dispatch` による手動起動も定義しています。手動起動の動作確認は、このワークフローをデフォルトブランチへ取り込んだ後に行います。
+`workflow_dispatch` による手動起動も定義しています。2026-11-12にPR #17をデフォルトブランチ `develop` へ取り込み、手動起動の成功を確認しました（下記の検証記録を参照）。
 
 変更ファイルのパスによる実行省略は行いません。文書だけを変更したPRでもチェックを報告し、必須チェックが実行されず待機し続ける事態を防ぎます。
 
@@ -121,7 +121,7 @@ docker compose start mysql backend frontend
 
 ジョブID・表示名は `frontend`・`backend` に固定し、他ワークフローで同名チェックを作りません。両ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトは各15分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
 
-Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendのGitHub上の実行確認と必須チェックの設定は後続作業です。
+Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendもGitHub上で実行成功を確認済みです。developの必須チェックは下記のマージ保護で設定しています。
 
 検証記録（実装コミット `0cacb7ad`）: [pushの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716208448)、[PRの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716216868)。lint・単体テスト・ビルドの失敗は終了コードでジョブへ伝え、成功扱いにしません。
 
@@ -144,9 +144,62 @@ MySQL 8.4はジョブ専用のサービスコンテナです。DBは `receipt_ci
 - `actionlint` 1.7.12、Ruby/PsychのYAML読み込み、`git diff --check` が成功。
 - ローカルのビルドはPATH上のGitの実行形式エラーを避けるため `/usr/bin/git` を使用。CIのコマンドは変更していません。
 
-backendのGitHub Actions上での成功・故意の失敗の検証は未実施です。ローカルの成功と区別して、今後のpush・PR検証で確認します。
+backendのGitHub Actions上での成功に加え、2026-11-13に故意のテスト失敗の検出と修正後の復旧も確認しました。下記の実行記録を参照してください。
+
+### ローカル確認・GitHub上の動作確認（2026-11-12）
+
+検証対象は `84648784`、PR #17のマージコミットは `32f164e5` です。ローカル文書 `local_docs/ci-tasks.md` 第5節は、2026-11-13の失敗・復旧検証を含めて全10項目にチェック済みです。
+
+- [x] 実設定を含まない一時コピーでfrontendの `npm ci`・lint・単体テスト34件・本番ビルド・動的描画検査が成功。Node.js 24.11.0、npm 11.6.1。
+- [x] Goの依存取得・整形検査・静的検査・全テスト・ビルドが成功。専用MySQLで `TestReceiptMySQLIntegration` がSKIPせずPASS。検証用コンテナは停止済み。
+- [x] YAML構文読み込みと `git diff --check` が成功。
+- [x] 同じ対象コミットの[push](https://github.com/yuto0503/receipt-manager-app/actions/runs/42919425262)・[PR](https://github.com/yuto0503/receipt-manager-app/actions/runs/42919628129)のCI成功を確認。
+- [x] [PR #17](https://github.com/yuto0503/receipt-manager-app/pull/17)を `develop` へマージし、[導入後のpush CI](https://github.com/yuto0503/receipt-manager-app/actions/runs/43115419486)の成功を確認。
+- [x] デフォルトブランチへ導入後、[手動起動](https://github.com/yuto0503/receipt-manager-app/actions/runs/43115473320)も成功することを確認する。
+
+`npm ci` は成功しましたが、依存監査は17件（moderate 8、high 8、critical 1）を報告しました。依存の修正は今回の検証に含めていません。
 
 設定仕様: [setup-goのキャッシュ](https://github.com/actions/setup-go#caching-dependency-files-and-build-outputs)、[GitHubのサービスコンテナ](https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers)。
+
+### CIの失敗・復旧検証（2026-11-13）
+
+検証ブランチ `verify/ci-failure-recovery-20261113` と [Draft PR #19](https://github.com/yuto0503/receipt-manager-app/pull/19) を使用しました。CI設定は変更せず、次の2つのテストを一時追加しました。
+
+- frontend: `frontend/tests/ci-failure-probe.test.mjs` の `assert.fail()`。`Unit tests` で `CI_FAILURE_PROBE_FRONTEND` と終了コード1を確認（既存34件は成功、検証用1件だけ失敗）。
+- backend: `backend/internal/handler/ci_failure_probe_test.go` の `TestCIFailureProbe` に `t.Fatal()`。`Unit and MySQL integration tests` で `CI_FAILURE_PROBE_BACKEND` と終了コード1を確認。MySQL統合テスト自体はPASS。
+
+| 対象コミット | push実行 | PR実行 | frontend / backend |
+| --- | --- | --- | --- |
+| 失敗用 `b90037b3` | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323420325) | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323478031) | 両方failure。失敗後のBuildはskip |
+| 修正後 `ad2ac3d7` | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323739081) | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323746277) | 両方success。frontend 34件成功、MySQL統合テストPASS、ビルド成功 |
+
+修正は通常の追加コミットで検証用2ファイルを削除し、同じブランチへ再pushしました。`git diff --exit-code 32f164e551a2676f30ca41993ad94660b9da64f1 HEAD` が終了コード0となり、修正後のファイル内容が検証開始前のdevelopと一致することを確認済みです。PR #19は `closed`・`merged: false` を確認し、失敗用変更はdevelopへ取り込んでいません。CIがテストの非0終了を検出することと、修正コミットで正常に戻ることをそれぞれ検証しました。lint・ビルド自体の故意の失敗やマージ保護ルールの検証は今回の範囲外です。
+
+### CI成功をマージ条件にする（2026-11-18）
+
+GitHubの [develop - required CI](https://github.com/yuto0503/receipt-manager-app/rules/27504634) をActiveで設定しています。CIのYAMLは検査を実行する設定、Rulesetは検査が通るまでマージを禁止する設定です。[設定の記録](.github/rulesets/develop.json) はGitHubへ送信したJSONであり、ファイルの編集だけではGitHubの設定は更新されません。
+
+| 設定 | 内容 |
+| --- | --- |
+| 対象 | `refs/heads/develop` |
+| 必須チェック | `frontend` と `backend`。実行元はGitHub Actions（App ID `15368`）に限定 |
+| 最新変更への追従 | 必須。developが進んだ場合は作業ブランチに取り込み、CIを再実行する |
+| PR | 必須。承認レビューは0件（自分のPRを自分で承認できないため） |
+| バイパス | なし。管理者も適用対象。設定自体を編集する管理権限は別 |
+| 履歴の保護 | force pushとブランチ削除を禁止 |
+
+設定前にREST/GraphQL APIで既存のRulesetとブランチ保護がともに0件、リポジトリがpublic、操作アカウントにadmin権限があることを確認しました。契約プラン名はAPIで取得できませんでしたが、公開リポジトリではFreeでも保護機能が利用でき、実際にActiveルールの作成・取得が成功しています。[GitHubの利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+
+`main` は初期コミット `851d14fa`（READMEのみ）でCIがないため、今回の保護対象には含めていません。mainの運用開始時は、CIと検査対象のアプリコードを含む変更をPRで取り込み、mainのpushとmain向けPRで両チェックが成功することを確認してから、mainを対象に同様のルールを追加します。チェックが存在しない状態で必須化するとマージが待機し続けるため、順序を守ります。
+
+検証には [PR #21](https://github.com/yuto0503/receipt-manager-app/pull/21) を使用し、以前の失敗・復旧コミットを専用ブランチ `verify/merge-protection-20261118` で再利用しました。
+
+| 状態 | push CI | PR CI | PRの判定 |
+| --- | --- | --- | --- |
+| 故意の失敗 `b90037b3` | [両ジョブfailure](https://github.com/yuto0503/receipt-manager-app/actions/runs/44196057775) | [両ジョブfailure](https://github.com/yuto0503/receipt-manager-app/actions/runs/44196078250) | `BLOCKED` |
+| 修正後 `ad2ac3d7` | [両ジョブsuccess](https://github.com/yuto0503/receipt-manager-app/actions/runs/44197246892) | [両ジョブsuccess](https://github.com/yuto0503/receipt-manager-app/actions/runs/44197255253) | `CLEAN` |
+
+PRはDraftではなく、両時点とも競合なし（`mergeable: MERGEABLE`）。`gh pr checks --required` でfrontend/backendが必須として認識されていることと、失敗ログの `CI_FAILURE_PROBE_FRONTEND` / `CI_FAILURE_PROBE_BACKEND` を確認しました。修正後はfrontend 34テストとMySQL統合テストがPASS。マージAPIは呼び出さず、GitHubのマージ可否判定で確認しました。PRはマージせずクローズ済みで、developは `32f164e5` のままです。設定JSONとGitHubから再取得した値の一致、および `git diff --check` も確認しました。
 
 ## 技術スタック
 
