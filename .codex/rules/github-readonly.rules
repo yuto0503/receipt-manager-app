@@ -1,0 +1,39 @@
+# Allow GitHub CLI subcommands whose operation is read-only.
+# Do not allow `gh`, `gh api`, or `gh api --method GET` as a prefix:
+# API methods can be overridden by later flags, and GraphQL can mutate data.
+prefix_rule(
+    pattern = ["gh", "auth", "status"],
+    decision = "allow",
+    match = ["gh auth status"],
+    not_match = ["gh auth login", "gh auth token", "gh auth logout"],
+)
+prefix_rule(
+    pattern = ["gh", "repo", "view"],
+    decision = "allow",
+    match = ["gh repo view yuto0503/receipt-manager-app --json name,visibility"],
+    not_match = ["gh repo edit", "gh repo delete"],
+)
+prefix_rule(
+    pattern = ["gh", "pr", ["view", "list", "checks", "diff", "status"]],
+    decision = "allow",
+    match = ["gh pr view 21", "gh pr checks 21 --required", "gh pr list"],
+    not_match = ["gh pr create", "gh pr merge 21", "gh pr close 21", "gh pr checkout 21", "gh pr edit 21", "gh pr review 21 --approve"],
+)
+prefix_rule(
+    pattern = ["gh", "run", ["view", "list", "watch"]],
+    decision = "allow",
+    match = ["gh run view 44197255253 --log", "gh run list", "gh run watch 44197255253 --exit-status"],
+    not_match = ["gh run rerun 44197255253", "gh run cancel 44197255253", "gh run delete 44197255253"],
+)
+prefix_rule(
+    pattern = ["gh", "workflow", ["view", "list"]],
+    decision = "allow",
+    match = ["gh workflow view ci.yml", "gh workflow list"],
+    not_match = ["gh workflow run ci.yml", "gh workflow enable ci.yml", "gh workflow disable ci.yml"],
+)
+prefix_rule(
+    pattern = ["gh", "issue", ["view", "list", "status"]],
+    decision = "allow",
+    match = ["gh issue view 1", "gh issue list", "gh issue status"],
+    not_match = ["gh issue create", "gh issue close 1", "gh issue edit 1", "gh issue comment 1"],
+)
