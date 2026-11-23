@@ -22,15 +22,12 @@
 
 設定キーの参照: https://learn.chatgpt.com/docs/config-file/config-reference
 
-## ローカルコミットの承認
+## Git操作の担当
 
-- `.codex/rules/local-commits.rules` は、信頼されたこのプロジェクトで `git add` と通常の `git commit -m` を追加確認なしで実行するためのルールです。
-- `config.toml` のサンドボックスや承認モードを全面的に緩めず、対象コマンドだけを許可します。pushや履歴書き換えの許可は追加しません。
-- 作業方針は `.codex/AGENTS.md` に記載します。AGENTS.mdへの記載だけではOSの書き込み制限は解除されません。
-- ルールはCodexの起動時に読み込まれます。追加後はCodexを再起動してください。プロジェクトの信頼設定と、利用環境・管理者のポリシーが優先されます。
-- 検証例: `codex execpolicy check --pretty --rules .codex/rules/local-commits.rules -- git commit -m update`。これはコマンドを実行せず許可判定だけを確認します。
-
-公式資料: https://learn.chatgpt.com/docs/agent-configuration/rules
+- `git add`・`git commit`・`git push` はユーザー自身が行います。Codexはファイルの変更と必要な検証まで行い、未ステージの状態で引き渡します。
+- 作業方針は `.codex/AGENTS.md` に記載します。特定のGit操作を明示的に依頼された場合のみ、その範囲で実行します。
+- `git add` と `git commit -m` の専用自動許可設定 `.codex/rules/local-commits.rules` は削除しました。
+- 現在のセッションに読み込まれた許可や、他の設定層にある許可を取り消すものではありません。許可が残っていても、上記の作業方針に従って自動実行しません。
 
 ## GitHubの読み取り操作の承認
 
