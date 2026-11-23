@@ -1,0 +1,20 @@
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+
+## 画面と通信
+
+- CIのfrontendジョブはNode.js 24で `npm ci`、`npm run lint`、`node --test tests/*.test.mjs`、`npm run build`、`node tests/check-build.mjs` を順に実行します。ビルドにはGo API・MySQL・実設定の.envは不要です。
+- 一覧ページはAPI取得のtry/catchより前に `await connection()` を呼び、実行時に描画します。接続先未設定時のエラー画面を静的生成しないため、ビルド後に `node tests/check-build.mjs` で確認してください。
+
+- ページの初期取得はServer Componentから `src/lib/receipts.ts` を使います。フォーム・削除確認はClient Componentです。
+- 登録・更新・削除は `src/app/api/receipts/` のRoute Handlerを通します。Go APIの接続先はサーバー専用の `SERVER_API_BASE_URL` に集約してください。
+- 中継先は `POST /receipts` と `PUT・DELETE /receipts/:id` に限定し、リダイレクトを追跡しないでください。中継の回帰テストはNode.js 24で `node --test tests/receipt-proxy.test.mjs`。
+- Go API通信・`ApiError` は `src/lib/api.ts` に集約します。`server-only` を維持し、Client Componentや共有の型・入力検証から取り込まないでください。通信の回帰テストはNode.js 24で `node --test tests/api.test.mjs`。
+- ブラウザの保存・削除は `src/lib/receipt-client.ts` に集約します。HTTPステータスと失敗種別を保持し、APIのmessageはテキスト表示、500系詳細は非表示にしてください。回帰テストは `node --test tests/receipt-client.test.mjs tests/receipts.test.mjs`。
+- 実設定の `.env`・`.env.*` は追跡せず、共有する設定は `.env.example` のダミー値のみとします。
+- 共通入力検証は `src/lib/receipt-input.ts`。購入日は暦日として扱い、表示時にタイムゾーン変換しないでください。
+- 入力検証の回帰テストはNode.js 24で `node --test tests/receipt-input.test.mjs`。画面テストの起動手順は `README.md` を参照し、必ずテスト専用APIに接続してください。
+- 実Go API・MySQLの受け入れ検証はルートの `ACCEPTANCE.md` に従い、独立した空DBで `node tests/receipt-acceptance.e2e.mjs <項目番号>` を実行してください。モックAPI向けテストと混同せず、作成したIDだけを削除してください。障害再現の `7-server-error`・`7-offline` は専用環境で実施し、記載の復旧手順まで行ってください。

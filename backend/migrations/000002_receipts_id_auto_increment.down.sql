@@ -1,0 +1,6 @@
+-- カラムを文字列型に戻す前に、AUTO_INCREMENTを解除する。
+ALTER TABLE receipts
+    MODIFY COLUMN id INT NOT NULL;
+
+ALTER TABLE receipts
+    MODIFY COLUMN id VARCHAR(36) NOT NULL;

@@ -1,0 +1,137 @@
+# 10. 動作確認と完了判定
+
+確認日: 2026-11-07。開発用の架空データのみ使用する。削除対象は検証で作成したIDに限定する。
+既存の個人データ・DBボリュームは使用しない。
+
+- [x] 1. フロント・API・MySQLを起動し、ブラウザから一覧→登録→詳細→編集→削除→一覧の一連の操作を確認する。
+- [x] 2. 再読み込み・URL直接入力・ブラウザの戻る／進むでも画面を表示でき、保存・削除後に古いデータが残らないことを確認する。
+- [x] 3. 一覧0件・1件・複数件、長い店名・カテゴリ、空メモ・複数行メモを確認する。
+- [x] 4. 登録・編集の両方で必須項目の空欄・空白のみ、金額0・上限・負数・小数・上限超過を確認する。
+- [x] 5. 文字数の上限ちょうど・超過、日本語・絵文字を確認する。
+- [x] 6. 購入日の月末・年末・うるう日・年の上下限・不正日付と、タイムゾーンによる日付ずれを確認する。
+- [x] 7. 不正IDの400、対象なしの404、APIの500、API停止時の通信失敗、送信中の二重操作を確認する。
+- [x] 8. スマートフォン幅・PC幅、キーボードのみの操作、ラベル・エラー・フォーカス・文字の読みやすさを確認する。
+- [x] 9. 入力検証や日付変換など回帰リスクのある処理には必要な自動テストを追加する。新たにテスト手段を導入した場合は実行コマンドを記録する。
+- [x] 10. `cd frontend && npm run lint` を実行し、成功することを確認する。
+- [x] 11. `cd frontend && npm run build` を実行し、成功することを確認する。
+- [x] 12. ブラウザのコンソール・ネットワークで、Reactの警告・未処理エラー・CORSエラーがないことを確認する。
+- [x] 13. 起動手順・環境変数・実装済み画面を関連READMEへ反映する。既存の誤ったフロント構成例も、実装に合わせて `frontend/src/` 配下へ修正する。
+- [x] 14. 本書に確認日・実行コマンド・結果・未実施事項を記録する。未実施の項目はチェックせず、理由を残す。
+
+## 検証環境とコマンド
+
+Node.js 24.11.0 / Next.js 16.2.10 / Go 1.26.3 / MySQL 8.4 / Playwright + Chrome。
+以下はローカル専用のダミー認証情報。既存の `.env` は変更しない。
+
+```sh
+docker run -d --name receipt-acceptance-mysql -p 127.0.0.1:13306:3306 --tmpfs /var/lib/mysql -e MYSQL_ROOT_PASSWORD=verification -e MYSQL_DATABASE=receipt_acceptance mysql:8.4
+cat backend/migrations/000001_create_receipts.up.sql backend/migrations/000002_receipts_id_auto_increment.up.sql backend/migrations/000003_receipts_timestamps.up.sql | docker exec -i -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot receipt_acceptance
+# backend/ で別ターミナルから起動
+DB_USER=root DB_PASSWORD=verification DB_HOST=127.0.0.1 DB_PORT=13306 DB_NAME=receipt_acceptance go run ./cmd/api
+# frontend/ でビルドし、別ターミナルから起動
+npm run build
+SERVER_API_BASE_URL=http://127.0.0.1:8080 npm run start -- --hostname 127.0.0.1 --port 3100
+```
+
+画面検証は `frontend/` で実行する。`PLAYWRIGHT_MODULE` は既存Playwrightの `index.mjs` の絶対パスを指定（通常インストール済みなら不要）。
+
+```sh
+export PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs
+export PLAYWRIGHT_CHANNEL=chrome
+export RECEIPT_UI_TEST_URL=http://127.0.0.1:3100
+export RECEIPT_TEST_API_URL=http://127.0.0.1:8080
+export RECEIPT_ACCEPTANCE_ISOLATED=1
+node tests/receipt-acceptance.e2e.mjs 1
+```
+
+## 項目別の結果
+
+2026-11-07に以下の順で実施し、項目ごとにチェック更新と個別コミットを行った。
+
+### 1. 実DBでの一連の操作
+
+`node tests/receipt-acceptance.e2e.mjs 1` 成功。一覧→登録→詳細→編集→削除→一覧をChromeで操作し、Go API経由でMySQLへの保存・更新・削除と削除後404を確認。テスト終了後のDBは0件。
+
+### 2. URL・再読み込み・履歴
+
+`node tests/receipt-acceptance.e2e.mjs 2` 成功。一覧・登録・詳細・編集への直接アクセスと再読み込み、戻る／進む、更新後の編集値・一覧、削除後の履歴で対象なし表示を確認。初回はテスト側の遷移待ち不足で失敗し、待機を追加して再実行成功。
+
+### 3. 件数・長文・メモ
+
+`node tests/receipt-acceptance.e2e.mjs 3` 成功。実DBの0件・1件・2件、255文字の店名・100文字のカテゴリ、空メモ・3行の日本語と絵文字メモを確認。320px・1280pxの一覧で横方向にはみ出さず、詳細は改行を保持。
+
+### 4. 必須項目・金額
+
+`node tests/receipt-acceptance.e2e.mjs 4` 成功。登録・編集の双方で必須空欄、店名・カテゴリ・金額の空白、負数・小数・上限超過を拒否し、最初のエラーへフォーカス。リクエスト未送信・DB不変を確認。0円・2,147,483,647円は保存成功。日付の空白はdate入力が空欄に正規化するため、空欄として確認。
+
+### 5. 文字数・日本語・絵文字
+
+`node tests/receipt-acceptance.e2e.mjs 5` 成功。登録・編集で日本語／絵文字の店名255・カテゴリ100・メモ2000文字を保存し、実DBからの取得と編集欄で一致。各上限+1文字は拒否しDB不変。Unicodeコードポイント単位の制約とutf8mb4保存を確認。
+
+### 6. 日付境界・タイムゾーン
+
+`node tests/receipt-acceptance.e2e.mjs 6` 成功。東京・UTC・米国西海岸で登録／編集し、月末・年末・うるう日・1000年・9999年の保存・再読込・編集値が一致。999年・10000年・平年2月29日・4月31日を拒否しDB不変。不正日付はChromeのdate要素が値を受け付けないため、テスト内でtext要素に切り替えてアプリ検証にも渡した。
+
+### 7. HTTPエラー・API停止・二重操作
+
+`node tests/receipt-acceptance.e2e.mjs 7` / `7-server-error` / `7-offline` 成功。GET・PUT・DELETEで不正ID400／対象なし404。登録・編集・削除の二重操作は各1リクエスト。500は専用DBの空テーブルを一時改名して実際のGo APIで発生させ、一覧のエラー表示・登録失敗時の入力保持・内部詳細非表示を確認。APIプロセスを停止し、一覧の通信エラーと登録中継の503を確認後に再起動。
+
+500の再現（ルートから実行、必ず最後に復元）:
+
+```sh
+docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot receipt_acceptance -e 'RENAME TABLE receipts TO receipts_verification_unavailable'
+# frontend/: node tests/receipt-acceptance.e2e.mjs 7-server-error
+docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot receipt_acceptance -e 'RENAME TABLE receipts_verification_unavailable TO receipts'
+```
+
+停止検証: この検証で起動したAPIを停止し `node tests/receipt-acceptance.e2e.mjs 7-offline` を実行。検証時は `lsof -nP -iTCP:8080 -sTCP:LISTEN` で起動したプロセスを確認して `kill -TERM`、上記起動コマンドで復帰した。既存の別用途APIには実行しない。
+
+### 8. 画面幅・キーボード・読みやすさ
+
+`node tests/receipt-acceptance.e2e.mjs 8` 成功。320／375／1280pxで全画面に横はみ出しなし。Tab・Enterで一覧→詳細→編集→保存→削除、Escapeで確認解除とフォーカス復帰を確認。ラベルと入力、補足・エラーの関連付け、先頭エラーへのフォーカスを検証。320／1280pxのスクリーンショットを目視し、文字・エラー・青いフォーカス枠の視認性と折返しを確認。画像は `/private/tmp/receipt-acceptance-{320,375,1280}.png`（一時成果物）。
+
+### 9. 自動回帰テスト
+
+項目1〜8の実DBブラウザテストを追加し各項目で成功。単体テストには各テキスト項目の日本語／絵文字境界、カテゴリ空白、1900年／2000年のうるう年判定、月末・年末を補強した。`frontend/README.md` に実行コマンドを追記。Playwrightは既存環境を使用し、新規依存追加なし。
+
+- `cd frontend && node --test tests/*.test.mjs`: 34件成功、失敗・スキップ0。既存のNode.jsモジュール種別推定警告あり（ブラウザのReact警告とは別）。
+- `cd backend && RECEIPT_TEST_MYSQL_DSN='root:verification@tcp(127.0.0.1:13306)/receipt_acceptance?parseTime=true' go test ./... -count=1`: 成功。DSN設定済みでMySQL統合テストも実行。
+- `cd backend && go vet ./...`: 成功。
+
+### 10. lint
+
+`cd frontend && npm run lint`: 終了コード0、警告・エラーなし。
+
+### 11. 本番ビルド
+
+`cd frontend && npm run build`: 終了コード0。Turbopackコンパイル・TypeScript検査・静的ページ生成成功。一覧・詳細・編集およびAPI中継は動的ルートとして出力。
+
+### 12. ブラウザコンソール・ネットワーク
+
+`node tests/receipt-acceptance.e2e.mjs 12` 成功。最新の本番ビルドを再起動し、CRUD操作中のconsole warning/error・pageerror・HTTPエラー・通信失敗を監視。React警告、未処理エラー、CORSエラーなし。同一オリジンへのPOST 201・PUT 200・DELETE 204を確認。
+
+画面遷移によるRSC取得中断と、204受信済みの本文なしDELETEの中断（`net::ERR_ABORTED`）は記録された。HTTP応答を照合して正常な遷移中断として区別し、それ以外の通信失敗は0件。故意に400／404／500／停止を発生させる項目7とは分けて正常操作を検証した。監視コード追加後の `npm run lint` も成功。
+
+### 13. READMEと実装の整合
+
+ルートREADMEの構成例は既に `frontend/src/` 配下だったため、実在する画面・Route Handlerまで具体化。手入力CRUDが実装済みでOCRは今後の機能であることを明記。フロントREADMEに本番起動・バックエンド環境変数・専用検証環境を案内し、モックAPIと実DBテストを区別。画面URL・起動コマンド・設定例をコードと照合し、参照先ファイルの存在と `git diff --check` を確認。`frontend/AGENTS.md` に実DB検証の実行先と復旧手順の参照を追加。
+
+### 14. 最終記録と完了判定
+
+確認日: 2026-11-07（日本時間）。本書に各項目の実行コマンド・結果・再現手順を記録済み。14項目すべて完了。項目ごとに1コミット、合計14コミット。アプリ本体の不具合修正は不要で、受け入れテスト・単体テスト・文書を追加／更新した。
+
+最終確認:
+
+- `git diff --check`: 成功。
+- `docker exec -e MYSQL_PWD=verification receipt-acceptance-mysql mysql -uroot receipt_acceptance -N -e 'SELECT COUNT(*) FROM receipts'`: 0件。各テストで作成したIDだけを削除済み。
+- 今回起動したAPI・フロントを終了し、`docker stop receipt-acceptance-mysql` で専用DBを停止済み。既存の個人データ・DBボリューム・実設定は変更なし。
+
+未実施事項・適用範囲:
+
+- チェックリスト内の未実施項目なし。
+- ブラウザ検証はmacOSのChrome（ヘッドレス）で、スマートフォン幅はビューポート変更による確認。Safari／Firefox・実機スマートフォン・スクリーンリーダーの確認は今回の実施範囲外。
+- Node.js単体テストではモジュール種別推定の既存警告あり。テストは成功し、ブラウザのReact警告はなし。
+- RSC取得と204受信済みDELETEの遷移中断は項目12の記載どおり。
+- 一時スクリーンショットは `/private/tmp` に保存し、Gitには含めていない。
+
+再実行時の注意: 専用MySQLはtmpfsなので停止すると検証データは保持されない。既存の停止コンテナを `docker start receipt-acceptance-mysql` で起動した場合も、MySQLの準備完了後に上記マイグレーションを適用する。Go APIとNext.jsも上記コマンドで再起動する。通常項目は1〜8・12を順に実行できるが、7の障害ケースは別途停止・復旧手順が必要。
