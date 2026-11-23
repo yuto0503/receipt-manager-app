@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
-const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL });
+const browser = await chromium.launch({
+  headless: true,
+  channel: process.env.PLAYWRIGHT_CHANNEL,
+});
 const page = await browser.newPage();
 page.setDefaultTimeout(15000);
 page.setDefaultNavigationTimeout(15000);
@@ -56,9 +59,19 @@ try {
   await page.getByRole("main").getByRole("alert").waitFor();
   assert.equal(await page.locator("#store_name").inputValue(), "APIエラー");
   const htmlMessage = '<img src=x onerror="alert(1)">';
-  await page.route("**/api/receipts/*", route => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ message: htmlMessage }) }));
+  await page.route("**/api/receipts/*", (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ message: htmlMessage }),
+    }),
+  );
   await page.getByRole("button", { name: "保存する" }).click();
-  await page.waitForFunction(expected => document.querySelector('main [role="alert"]')?.textContent === expected, htmlMessage);
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelector('main [role="alert"]')?.textContent === expected,
+    htmlMessage,
+  );
   assert.equal(await page.locator('main [role="alert"] img').count(), 0);
   await page.unroute("**/api/receipts/*");
   await page.locator("#store_name").fill("更新検証店");
@@ -79,11 +92,18 @@ try {
   await page.waitForURL("**/receipts");
   assert.equal(await page.getByRole("link", { name: "更新検証店" }).count(), 0);
   await page.goto(detail);
-  await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
-  assert.equal(await page.locator("h1").innerText(), "対象のレシートが見つかりません");
+  await page
+    .getByRole("heading", { name: "対象のレシートが見つかりません" })
+    .waitFor();
+  assert.equal(
+    await page.locator("h1").innerText(),
+    "対象のレシートが見つかりません",
+  );
   for (const path of ["/receipts/9999", "/receipts/9999/edit"]) {
     await page.goto(base + path);
-    await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
+    await page
+      .getByRole("heading", { name: "対象のレシートが見つかりません" })
+      .waitFor();
     assert.equal(
       await page.locator("h1").innerText(),
       "対象のレシートが見つかりません",

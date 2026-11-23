@@ -38,11 +38,20 @@ export async function apiRequest(
 
   try {
     const url = new URL(base);
-    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    )
       throw new Error("invalid base URL");
   } catch {
     // 設定値そのものやURL解析エラーは利用者へ返さない。
-    throw new ApiError(503, "API接続先の設定が不正です。管理者にSERVER_API_BASE_URLの設定を確認してください。");
+    throw new ApiError(
+      503,
+      "API接続先の設定が不正です。管理者にSERVER_API_BASE_URLの設定を確認してください。",
+    );
   }
 
   let response: Response;
@@ -61,7 +70,10 @@ export async function apiRequest(
 
   if (response.status === 204) return null;
   if (init?.method === "DELETE" && response.ok)
-    throw new ApiError(502, "削除結果を確認できませんでした。一覧を確認してください。");
+    throw new ApiError(
+      502,
+      "削除結果を確認できませんでした。一覧を確認してください。",
+    );
   let data: unknown;
   try {
     data = await response.json();
@@ -69,8 +81,14 @@ export async function apiRequest(
     // HTMLや空のエラー本文でも、404などのHTTPステータスを失わない。
     if (!response.ok)
       throw new ApiError(response.status, errorMessage(response.status, null));
-    if (error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name))
-      throw new ApiError(503, "APIの応答がタイムアウトしました。時間をおいて再試行してください。");
+    if (
+      error instanceof Error &&
+      ["TimeoutError", "AbortError"].includes(error.name)
+    )
+      throw new ApiError(
+        503,
+        "APIの応答がタイムアウトしました。時間をおいて再試行してください。",
+      );
     throw new ApiError(502, "APIから正しい応答を受信できませんでした。");
   }
   if (!response.ok)

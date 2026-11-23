@@ -51,8 +51,12 @@ jobs:
           test ! -e .env.production.local
           test -z "${SERVER_API_BASE_URL:-}"
       # Keep failures fatal: no continue-on-error or shell success fallback.
+      - name: Check formatting
+        run: npm run format:check
       - name: Lint
         run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
       - name: Unit tests
         run: node --test tests/*.test.mjs
       - name: Build

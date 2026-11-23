@@ -6,7 +6,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 画面と通信
 
-- CIのfrontendジョブはNode.js 24で `npm ci`、`npm run lint`、`node --test tests/*.test.mjs`、`npm run build`、`node tests/check-build.mjs` を順に実行します。ビルドにはGo API・MySQL・実設定の.envは不要です。
+- CIのfrontendジョブはNode.js 24で `npm ci`、`npm run format:check`、`npm run lint`、`npm run typecheck`、`node --test tests/*.test.mjs`、`npm run build`、`node tests/check-build.mjs` を順に実行します。これらの検査にはGo API・MySQL・実設定の.envは不要です。
+- コード・テスト・設定の整形は `npm run format`、整形漏れの検査は `npm run format:check` を使います。生成物・lockfile・実設定・Markdown・静的アセットは `.prettierignore` で除外します。
+- `npm run typecheck` は `next typegen && tsc --noEmit` です。クリーンな環境でもルート型を検査できるよう、型生成を省略しないでください。本番ビルド内の型検査も維持します。
 - 一覧ページはAPI取得のtry/catchより前に `await connection()` を呼び、実行時に描画します。接続先未設定時のエラー画面を静的生成しないため、ビルド後に `node tests/check-build.mjs` で確認してください。
 
 - ページの初期取得はServer Componentから `src/lib/receipts.ts` を使います。フォーム・削除確認はClient Componentです。

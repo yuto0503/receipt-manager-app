@@ -109,7 +109,7 @@ docker compose start mysql backend frontend
 
 ## CI
 
-[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・lint・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境でfrontendの全ステップ成功を確認しました。
+[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・Prettier整形検査・lint・独立した型検査（`next typegen && tsc --noEmit`）・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境で当時のfrontendの全ステップ成功を確認しました。整形検査・独立した型検査の追加後のGitHub上での確認は、次回push時に行ってください。
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
@@ -126,6 +126,14 @@ Actionは公式リリースの完全なコミットSHAで固定しています�
 検証記録（実装コミット `0cacb7ad`）: [pushの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716208448)、[PRの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716216868)。lint・単体テスト・ビルドの失敗は終了コードでジョブへ伝え、成功扱いにしません。
 
 frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面を利用する際にはAPIの接続設定が必要です。[ローカルでの検証手順](frontend/README.md#ciと同じ検証)を参照してください。
+
+### frontendのformatter・typecheck導入検証（2026-11-24）
+
+- [x] Prettierの整形チェック・ESLint・単体テスト34件が成功。コード・テスト25ファイルの変更は、変更前にPrettierを適用した結果と一致することを確認。
+- [x] 実設定・生成物を含まない一時コピーで `npm ci`、独立した型検査、本番ビルド、一覧ページの動的描画検査が成功。ビルドはサンドボックス内で進行しなかったため、同じ一時コピーで制限外に再実行して成功。
+- [x] 別の一時コピーに未整形コード・型不一致を入れ、各チェックの非0終了と修正後の成功を確認。
+- [x] ワークフローのYAML読み込みと `git diff --check` が成功。`actionlint` は環境にないため未実施。
+- [ ] 追加後のGitHub Actionsのfrontendジョブ成功を確認（ユーザーによるpush後）。
 
 ### backendの検証
 

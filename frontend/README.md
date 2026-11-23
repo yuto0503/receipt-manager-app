@@ -53,13 +53,19 @@ cd frontend
 node --version
 npm --version
 npm ci
+npm run format:check
 npm run lint
+npm run typecheck
 node --test tests/*.test.mjs
 npm run build
 node tests/check-build.mjs
 ```
 
 CIはnpmのダウンロードキャッシュだけを利用し、`node_modules`・`.next` は再利用しません。`npm ci` はlockfileとpackage.jsonが不整合なら失敗します。`npm test` スクリプトはありません。
+
+整形にはPrettierを使用します。`npm run format` でコード・テスト・設定を自動整形し、`npm run format:check` で整形漏れだけを検出します。CIではファイルを書き換えず、整形漏れがあれば失敗します。生成物・lockfile・実設定・Markdown・静的アセットは `.prettierignore` で除外します。ESLintには `eslint-config-prettier` を適用し、整形ルールの競合を防ぎます。
+
+`npm run typecheck` は `next typegen && tsc --noEmit` を実行します。Next.jsのルート型と `next-env.d.ts` を先に生成するため、`.next` のない環境でもビルド前に型検査できます。`strict` と本番ビルド内の型検査も維持しています。生成された型ファイルはGit管理対象外です。
 
 各検査を独立したステップで実行し、非0の終了コードをそのままCIの失敗にします。`continue-on-error` や `|| true` で失敗を無視しません。Actionsのfrontendジョブで、失敗したステップ名とログを確認してください。
 

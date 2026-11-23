@@ -37,12 +37,15 @@ export async function mutateReceipt(
       body = JSON.stringify(input);
     }
     // URL・クエリ・本文の指定で転送先やメソッドを変更させない。
-    const data = await apiRequest(method === "POST" ? "/receipts" : `/receipts/${id}`, {
-      method,
-      redirect: "error",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
+    const data = await apiRequest(
+      method === "POST" ? "/receipts" : `/receipts/${id}`,
+      {
+        method,
+        redirect: "error",
+        headers: { "Content-Type": "application/json" },
+        body,
+      },
+    );
     if (method !== "DELETE" && !isReceipt(data))
       throw new ApiError(
         502,
