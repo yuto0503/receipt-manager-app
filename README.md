@@ -190,7 +190,7 @@ GitHubの [develop - required CI](https://github.com/yuto0503/receipt-manager-ap
 
 設定前にREST/GraphQL APIで既存のRulesetとブランチ保護がともに0件、リポジトリがpublic、操作アカウントにadmin権限があることを確認しました。契約プラン名はAPIで取得できませんでしたが、公開リポジトリではFreeでも保護機能が利用でき、実際にActiveルールの作成・取得が成功しています。[GitHubの利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
 
-`main` は初期コミット `851d14fa`（READMEのみ）でCIがないため、今回の保護対象には含めていません。mainの運用開始時は、CIと検査対象のアプリコードを含む変更をPRで取り込み、mainのpushとmain向けPRで両チェックが成功することを確認してから、mainを対象に同様のルールを追加します。チェックが存在しない状態で必須化するとマージが待機し続けるため、順序を守ります。
+2026-11-18時点の `main` は初期コミット `851d14fa`（READMEのみ）でCIがなく、保護対象外でした。2026-11-24にCIとアプリコードをPRで取り込み、main向けPRとmainのpushで両チェックが成功してから、同様の保護を有効にしました。詳細は下記「mainへのCI導入と保護」を参照してください。チェックが存在しない状態で必須化するとマージが待機し続けるため、CI導入と成功確認を先に行います。
 
 検証には [PR #21](https://github.com/yuto0503/receipt-manager-app/pull/21) を使用し、以前の失敗・復旧コミットを専用ブランチ `verify/merge-protection-20261118` で再利用しました。
 
@@ -200,6 +200,17 @@ GitHubの [develop - required CI](https://github.com/yuto0503/receipt-manager-ap
 | 修正後 `ad2ac3d7` | [両ジョブsuccess](https://github.com/yuto0503/receipt-manager-app/actions/runs/44197246892) | [両ジョブsuccess](https://github.com/yuto0503/receipt-manager-app/actions/runs/44197255253) | `CLEAN` |
 
 PRはDraftではなく、両時点とも競合なし（`mergeable: MERGEABLE`）。`gh pr checks --required` でfrontend/backendが必須として認識されていることと、失敗ログの `CI_FAILURE_PROBE_FRONTEND` / `CI_FAILURE_PROBE_BACKEND` を確認しました。修正後はfrontend 34テストとMySQL統合テストがPASS。マージAPIは呼び出さず、GitHubのマージ可否判定で確認しました。PRはマージせずクローズ済みで、developは `32f164e5` のままです。設定JSONとGitHubから再取得した値の一致、および `git diff --check` も確認しました。
+
+### mainへのCI導入と保護（2026-11-24）
+
+[PR #22](https://github.com/yuto0503/receipt-manager-app/pull/22) で、CI成功済みのdevelop `32f164e5` をmainへ取り込みました。マージコミットは `28a98680ad573598fe7d0e0c403cb463de8e2f9b` です。
+
+- [main向けPRのCI](https://github.com/yuto0503/receipt-manager-app/actions/runs/45283817156) と [mainへのpush CI](https://github.com/yuto0503/receipt-manager-app/actions/runs/45284456249) のfrontend/backendがともに成功。両実行でfrontend 34件、MySQL統合テストのPASS、ビルド成功を確認しました。
+- 成功確認後、[main - required CI](https://github.com/yuto0503/receipt-manager-app/rules/27944544) をActiveで作成しました。対象は `refs/heads/main` のみで、[設定記録](.github/rulesets/main.json) は既存developルールの実際の設定を基にしています。
+- GitHub Actions（App ID `15368`）のfrontend/backend成功、最新mainへの追従、PR経由を必須とし、force pushと削除を禁止しています。レビュー承認は0件、管理者を含むバイパスはありません。
+- GitHubから再取得した設定とJSONの一致、mainの `protected: true`、mainに適用される4ルール、操作アカウントの `current_user_can_bypass: never` を確認しました。既存developルールは変更されていません。main用の故意のCI失敗によるマージ拒否検証は今回再実施していません。
+
+今後は作業PRをdevelopへ取り込み、リリース対象をdevelopからmainへのPRで反映します。両ブランチとも必須CI成功後にマージします。mainが先に進んだ場合はマージ先の変更を取り込み、CIを再実行してください。デフォルトブランチはdevelopです。設定JSONは適用内容の記録であり、編集だけではGitHubに反映されません。
 
 ## 技術スタック
 
