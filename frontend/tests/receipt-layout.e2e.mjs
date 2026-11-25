@@ -1,5 +1,6 @@
 // 必ずテスト専用APIに接続したNext.jsに対して実行する。
 import assert from "node:assert/strict";
+import { artifactPath } from "./artifact-path.mjs";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
@@ -223,7 +224,7 @@ try {
       ),
     );
     await page.screenshot({
-      path: `/private/tmp/receipt-layout-${colorScheme}.png`,
+      path: artifactPath(`receipt-layout-${colorScheme}.png`),
       fullPage: true,
     });
   }

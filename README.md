@@ -109,7 +109,7 @@ docker compose start mysql backend frontend
 
 ## CI
 
-[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・Prettier整形検査・lint・独立した型検査（`next typegen && tsc --noEmit`）・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境で当時のfrontendの全ステップ成功を確認しました。整形検査・独立した型検査の追加後のGitHub上での確認は、次回push時に行ってください。
+[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・Prettier整形検査・lint・独立した型検査（`next typegen && tsc --noEmit`）・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画検査・ChromiumによるモックAPI向けE2Eを順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境で当時のfrontendの全ステップ成功を確認しました。追加した検査のGitHub上での確認は、次回push時に行ってください。
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
@@ -134,6 +134,17 @@ frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面
 - [x] 別の一時コピーに未整形コード・型不一致を入れ、各チェックの非0終了と修正後の成功を確認。
 - [x] ワークフローのYAML読み込みと `git diff --check` が成功。`actionlint` は環境にないため未実施。
 - [ ] 追加後のGitHub Actionsのfrontendジョブ成功を確認（ユーザーによるpush後）。
+
+### frontendのE2E導入検証（2026-11-24）
+
+既存の8本の画面テストを `npm run test:e2e` にまとめ、frontendジョブの本番ビルド後に実行します。対象はChromium → Next.js → 専用モックAPIです。実Go API・MySQLを通す受け入れ検証は含みません。共有状態の競合を避けるため1ワーカーで順番に実行し、失敗はfrontendチェックへ伝えます。[実行手順・レポート](frontend/README.md#ciで実行するe2e)を参照してください。
+
+- [x] 実設定・生成物を含まない一時コピーで `npm ci`、型検査、単体テスト34件、本番ビルド、動的描画検査が成功。整形チェック・lintも成功。
+- [x] macOS / Node.js 24.11.0 / Playwright 1.65.1のChromiumで、`CI=true npm run test:e2e` が8本すべて成功（29.1秒）。HTMLレポートと画像4枚の出力を確認。
+- [x] 既存テストの描画待ち不足と遷移後のレスポンス本文取得で非0終了・失敗ログ保存を確認。テストを修正し、全件成功へ復旧。
+- [x] ワークフローのYAML読み込み、frontend/backendのジョブ名維持、`git diff --check` を確認。`actionlint` は環境にないため未実施。
+- [x] 2026-11-26に現在のコードから一時環境を作り直して再検証。整形・lint・型検査・単体テスト34件・本番ビルド・動的描画検査・E2E全8本（27.9秒）が成功。検証環境と作業中のコード・テスト・設定50ファイルの一致も確認。
+- [ ] push後、GitHub ActionsのUbuntu上でE2E成功と `frontend-e2e-results` artifact保存を確認。
 
 ### backendの検証
 

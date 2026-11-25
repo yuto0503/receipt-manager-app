@@ -6,7 +6,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 画面と通信
 
-- CIのfrontendジョブはNode.js 24で `npm ci`、`npm run format:check`、`npm run lint`、`npm run typecheck`、`node --test tests/*.test.mjs`、`npm run build`、`node tests/check-build.mjs` を順に実行します。これらの検査にはGo API・MySQL・実設定の.envは不要です。
+- CIのfrontendジョブはNode.js 24で `npm ci`、`npm run format:check`、`npm run lint`、`npm run typecheck`、`node --test tests/*.test.mjs`、`npm run build`、`node tests/check-build.mjs`、`npx playwright install --with-deps chromium`、`npm run test:e2e` を順に実行します。これらの検査にはGo API・MySQL・実設定の.envは不要です。
+- `npm run test:e2e` は本番ビルド後に実行します。Playwrightが専用モックAPI（127.0.0.1:18080）とNext.js（127.0.0.1:3100）を起動・待機・終了し、既存サーバーは再利用しません。共有データと障害状態があるため、8本のモック向けテストを1ワーカーで順番に実行し、失敗時は停止します。実Go API・MySQL向けの受け入れテストは含めないでください。
+- E2EのHTMLレポート・ログ・取得できた画像は `playwright-report/` と `test-results/` に出力し、CIでは7日間保存します。生成物はGit・ESLint・Prettierの対象外です。
 - コード・テスト・設定の整形は `npm run format`、整形漏れの検査は `npm run format:check` を使います。生成物・lockfile・実設定・Markdown・静的アセットは `.prettierignore` で除外します。
 - `npm run typecheck` は `next typegen && tsc --noEmit` です。クリーンな環境でもルート型を検査できるよう、型生成を省略しないでください。本番ビルド内の型検査も維持します。
 - 一覧ページはAPI取得のtry/catchより前に `await connection()` を呼び、実行時に描画します。接続先未設定時のエラー画面を静的生成しないため、ビルド後に `node tests/check-build.mjs` で確認してください。

@@ -1,5 +1,6 @@
 // 実データを操作しないため、必ずテスト専用APIに接続したNext.jsに対して実行する。
 import assert from "node:assert/strict";
+import { artifactPath } from "./artifact-path.mjs";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
@@ -20,16 +21,18 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(base);
   await page.waitForURL("**/receipts");
-  assert.equal(await page.locator("h1").innerText(), "レシート一覧");
+  await page
+    .getByRole("heading", { name: "レシート一覧", exact: true })
+    .waitFor();
   for (const [path, heading] of [
     ["/receipts/new", "レシートを登録"],
     ["/receipts/1", "レシート詳細"],
     ["/receipts/1/edit", "レシートを編集"],
   ]) {
     await page.goto(base + path);
-    assert.equal(await page.locator("h1").innerText(), heading);
+    await page.getByRole("heading", { name: heading, exact: true }).waitFor();
     await page.reload();
-    assert.equal(await page.locator("h1").innerText(), heading);
+    await page.getByRole("heading", { name: heading, exact: true }).waitFor();
   }
   await page.getByRole("link", { name: "キャンセル", exact: true }).click();
   await page.waitForURL("**/receipts/1");
@@ -95,19 +98,11 @@ try {
   await page
     .getByRole("heading", { name: "対象のレシートが見つかりません" })
     .waitFor();
-  assert.equal(
-    await page.locator("h1").innerText(),
-    "対象のレシートが見つかりません",
-  );
   for (const path of ["/receipts/9999", "/receipts/9999/edit"]) {
     await page.goto(base + path);
     await page
       .getByRole("heading", { name: "対象のレシートが見つかりません" })
       .waitFor();
-    assert.equal(
-      await page.locator("h1").innerText(),
-      "対象のレシートが見つかりません",
-    );
   }
   for (const path of ["/receipts/abc", "/receipts/0/edit", "/receipts/-1"]) {
     await page.goto(base + path);
@@ -120,10 +115,9 @@ try {
   for (const path of ["/receipts/500", "/receipts/502"]) {
     await page.goto(base + path);
     await page.getByRole("main").getByRole("alert").waitFor();
-    assert.equal(
-      await page.locator("h1").innerText(),
-      "レシートを表示できません",
-    );
+    await page
+      .getByRole("heading", { name: "レシートを表示できません", exact: true })
+      .waitFor();
   }
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(base + "/receipts/new");
@@ -133,13 +127,13 @@ try {
     ),
   );
   await page.screenshot({
-    path: "/private/tmp/receipt-new-mobile.png",
+    path: artifactPath("receipt-new-mobile.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(base + "/receipts/1");
   await page.screenshot({
-    path: "/private/tmp/receipt-detail-desktop.png",
+    path: artifactPath("receipt-detail-desktop.png"),
     fullPage: true,
   });
   assert.deepEqual(errors, []);

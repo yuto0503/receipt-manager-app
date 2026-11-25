@@ -11,6 +11,8 @@ frontend/.yarn/*
 !frontend/.yarn/versions
 
 frontend/coverage
+frontend/playwright-report/
+frontend/test-results/
 frontend/.next/
 frontend/out/
 frontend/build

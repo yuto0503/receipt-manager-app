@@ -49,8 +49,13 @@ try {
   await page.getByRole("button", { name: "保存する" }).click();
   const saved = await response;
   assert.equal(saved.status(), 201);
-  id = (await saved.json()).id;
-  await page.waitForURL(base + `/receipts/${id}?saved=1`);
+  // Full navigation can discard the browser's POST response body.
+  // Verify the destination record through the API after navigation completes.
+  await page.waitForURL(/\/receipts\/[1-9]\d*\?saved=1$/);
+  id = Number(new URL(page.url()).pathname.split("/").pop());
+  const persisted = await page.request.get(api + `/receipts/${id}`);
+  assert.equal(persisted.status(), 200);
+  assert.equal((await persisted.json()).store_name, "画面検証店");
   await page
     .getByRole("status")
     .filter({ hasText: "保存しました。" })
