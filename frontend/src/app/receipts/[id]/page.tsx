@@ -31,7 +31,11 @@ export default async function ReceiptPage({
   return (
     <>
       <h1 className="mb-6">レシート詳細</h1>
-      {saved === "1" && <p role="status" className="panel mb-6">保存しました。</p>}
+      {saved === "1" && (
+        <p role="status" className="panel mb-6">
+          保存しました。
+        </p>
+      )}
       <dl className="panel space-y-4">
         <div>
           <dt>店名</dt>

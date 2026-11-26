@@ -1,0 +1,18 @@
+# Allow PR creation and merging when authorized by the user's task.
+# This prefix rule applies to any repository accessible to gh; it does not
+# restrict --repo, merge options, or replace task-level authorization.
+prefix_rule(
+    pattern = ["gh", "pr", ["create", "merge"]],
+    decision = "allow",
+    match = [
+        "gh pr create --base main --head develop --title update --body-file /tmp/pr.md",
+        "gh pr merge 22 --merge --match-head-commit 32f164e551a2676f30ca41993ad94660b9da64f1",
+    ],
+    not_match = [
+        "gh api repos/yuto0503/receipt-manager-app/rulesets",
+        "gh pr close 22",
+        "gh repo delete yuto0503/receipt-manager-app",
+        "git push origin main",
+        "git push --force origin main",
+    ],
+)

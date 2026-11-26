@@ -53,23 +53,68 @@ cd frontend
 node --version
 npm --version
 npm ci
+npm run format:check
 npm run lint
+npm run typecheck
 node --test tests/*.test.mjs
 npm run build
 node tests/check-build.mjs
+npx playwright install --with-deps chromium
+npm run test:e2e
 ```
 
 CIはnpmのダウンロードキャッシュだけを利用し、`node_modules`・`.next` は再利用しません。`npm ci` はlockfileとpackage.jsonが不整合なら失敗します。`npm test` スクリプトはありません。
+
+整形にはPrettierを使用します。`npm run format` でコード・テスト・設定を自動整形し、`npm run format:check` で整形漏れだけを検出します。CIではファイルを書き換えず、整形漏れがあれば失敗します。生成物・lockfile・実設定・Markdown・静的アセットは `.prettierignore` で除外します。ESLintには `eslint-config-prettier` を適用し、整形ルールの競合を防ぎます。
+
+`npm run typecheck` は `next typegen && tsc --noEmit` を実行します。Next.jsのルート型と `next-env.d.ts` を先に生成するため、`.next` のない環境でもビルド前に型検査できます。`strict` と本番ビルド内の型検査も維持しています。生成された型ファイルはGit管理対象外です。
 
 各検査を独立したステップで実行し、非0の終了コードをそのままCIの失敗にします。`continue-on-error` や `|| true` で失敗を無視しません。Actionsのfrontendジョブで、失敗したステップ名とログを確認してください。
 
 これらの検証に `.env`・`.env.local`・`SERVER_API_BASE_URL`・Go API・MySQLは不要です。設定なしでの確認は実設定を消さず、Git管理対象ファイルだけを別ディレクトリへコピーして行ってください。一覧ページは `connection()` でリクエスト時に描画し、接続先未設定のエラー画面をビルド結果に固定しません。`check-build.mjs` が一覧の静的生成を検出した場合は非0終了します。
 
-アプリ起動後の画面操作にはAPIの接続設定が必要です。上記の検証はブラウザ操作や実DBの統合検証を含みません。CIはubuntu-24.04上のNode.js 24を使用します。既存DockerfileのNode.js 22との整合は後続課題です。
+最後の `npm run test:e2e` はPlaywrightが専用モックAPIと本番ビルドのNext.jsを起動し、Chromiumで画面を操作します。CIはubuntu-24.04上のNode.js 24を使用します。既存DockerfileのNode.js 22との整合は後続課題です。
+
+### CIで実行するE2E
+
+`playwright.config.mjs` と `tests/ci-e2e.spec.mjs` で、既存のnavigation・layout・list・form・create・detail・edit・deleteの8本を実行します。登録・編集・削除、入力検証、直接アクセス・再読み込み、404・API異常、モバイル表示などを検査します。対象はブラウザ → Next.js → 専用モックAPIであり、実Go API・MySQLの受け入れ検証は含みません。
+
+モックAPIは `127.0.0.1:18080`、Next.jsは `127.0.0.1:3100` を使います。Playwrightが応答待ちと終了処理を担当し、使用中のポートがあれば失敗します。ローカルでも既存サーバーを再利用しません。Next.jsの接続先とテスト用URLは専用モック環境に固定し、実DBには接続しません。外部の `PLAYWRIGHT_MODULE`・`PLAYWRIGHT_CHANNEL` はこの一括実行では使わず、lockfileに固定したPlaywrightと対応するChromiumを使用します。
+
+テスト間でモックのデータと障害状態を共有するため、1ワーカー・並列実行なし・リトライなしで順番に実行し、最初の失敗で停止します。各スクリプトは150秒、サーバー起動はモック30秒・Next.js60秒でタイムアウトします。スクリプトの非0終了はPlaywright経由でCIを失敗させます。
+
+HTMLレポートは `playwright-report/`、テストのログと取得できたスクリーンショットは `test-results/` に保存します。既存スクリプトが個別にブラウザを起動するため、自動トレース・失敗時の自動スクリーンショットはありません。CIではE2E成功・失敗のどちらでも `frontend-e2e-results` artifactに7日間保存し、サーバーログはActionsの実行ログで確認できます。これらの生成物はGit・ESLint・Prettierの対象外です。
+
+ローカルでブラウザだけを取得する場合は `npx playwright install chromium`、レポートの表示は `npx playwright show-report` を使います。個別スクリプトを手動実行する手順は以下に残しています。
+
+### 実Go API・MySQLのCI検証
+
+独立した `e2e` ジョブでは、専用MySQL 8.4の空DBにupマイグレーションを適用し、実Go APIと本番Next.jsを起動します。`playwright` を直接の開発依存として `@playwright/test` と同じバージョンに固定し、既存の `node tests/receipt-acceptance.e2e.mjs <項目>` というライブラリAPI方式を維持しています。`npm run test:e2e` は引き続きモック専用です。
+
+LinuxでCIと同じ起動管理を再現するには、[ACCEPTANCE.md](../ACCEPTANCE.md) に従って専用の空DBとマイグレーションを用意し、次をリポジトリルートから実行します。Node.js 24・Go・curl・`setsid`・GNU `timeout` が必要です。DBはこの実行専用とし、以下の値はその接続先に合わせてください。
+
+```sh
+cd frontend
+npm ci
+npx playwright install --with-deps chromium
+npm run build
+cd ../backend
+go build -o /tmp/receipt-e2e-api ./cmd/api
+cd ..
+DB_USER=root DB_PASSWORD=verification DB_HOST=127.0.0.1 DB_PORT=13306 DB_NAME=receipt_acceptance \
+SERVER_API_BASE_URL=http://127.0.0.1:8080 \
+RECEIPT_UI_TEST_URL=http://127.0.0.1:3100 RECEIPT_TEST_API_URL=http://127.0.0.1:8080 \
+RECEIPT_ACCEPTANCE_ISOLATED=1 E2E_API_BINARY=/tmp/receipt-e2e-api \
+E2E_STEPS='1' bash .github/scripts/run-e2e.sh
+```
+
+まず項目1でCRUDを確認し、`E2E_STEPS='1 2 3 4 5 6 7 8 12'` で全通常項目へ広げます。通常のpush・PRのCIは初期段階として項目1だけを実行し、Actionsの手動実行で `extended_e2e` を有効にすると全通常項目をこの順序で実行します。共有DBなので並列実行はしません。`7-server-error`・`7-offline` はこの起動スクリプトでは拒否し、手動の障害・復旧手順で別途検証します。macOSでは従来の個別起動手順を利用できます。
+
+`RECEIPT_E2E_OUTPUT_DIR` でログ・画像の保存先を変更でき、起動スクリプトの既定値は `frontend/test-results/acceptance/` です。テスト失敗時は可能な範囲で画面画像を取得し、終了時には作成したIDだけを削除してブラウザを閉じます。スクリプトは起動したプロセスグループを終了し、CIはMySQLサービスも破棄します。Actionsの `e2e-results` artifactには実際に出力したログと画像だけを保存します。Linuxのブラウザ検証は実機スマートフォンの検証を兼ねません。
 
 ## 検証
 
-実際のGo API・MySQLを使う受け入れ検証は [ACCEPTANCE.md](../ACCEPTANCE.md) を参照してください。専用の空DBで実行し、既存の個人データに接続しないでください。`tests/receipt-acceptance.e2e.mjs` は既存のPlaywright実行環境を使い、項目番号を指定して順番に実行します。
+実際のGo API・MySQLを使う受け入れ検証は [ACCEPTANCE.md](../ACCEPTANCE.md) を参照してください。専用の空DBで実行し、既存の個人データに接続しないでください。`tests/receipt-acceptance.e2e.mjs` はインストール済みのPlaywrightを使い、項目番号を指定して順番に実行します。
 
 ```sh
 # ACCEPTANCE.mdの専用環境・環境変数を準備して実行（項目1〜8）

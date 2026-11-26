@@ -22,12 +22,30 @@
 
 設定キーの参照: https://learn.chatgpt.com/docs/config-file/config-reference
 
-## ローカルコミットの承認
+## Git操作の担当
 
-- `.codex/rules/local-commits.rules` は、信頼されたこのプロジェクトで `git add` と通常の `git commit -m` を追加確認なしで実行するためのルールです。
-- `config.toml` のサンドボックスや承認モードを全面的に緩めず、対象コマンドだけを許可します。pushや履歴書き換えの許可は追加しません。
-- 作業方針は `.codex/AGENTS.md` に記載します。AGENTS.mdへの記載だけではOSの書き込み制限は解除されません。
-- ルールはCodexの起動時に読み込まれます。追加後はCodexを再起動してください。プロジェクトの信頼設定と、利用環境・管理者のポリシーが優先されます。
-- 検証例: `codex execpolicy check --pretty --rules .codex/rules/local-commits.rules -- git commit -m update`。これはコマンドを実行せず許可判定だけを確認します。
+- `git add`・`git commit`・`git push` はユーザー自身が行います。Codexはファイルの変更と必要な検証まで行い、未ステージの状態で引き渡します。
+- 作業方針は `.codex/AGENTS.md` に記載します。特定のGit操作を明示的に依頼された場合のみ、その範囲で実行します。
+- `git add` と `git commit -m` の専用自動許可設定 `.codex/rules/local-commits.rules` は削除しました。
+- 現在のセッションに読み込まれた許可や、他の設定層にある許可を取り消すものではありません。許可が残っていても、上記の作業方針に従って自動実行しません。
+
+## GitHubの読み取り操作の承認
+
+- `.codex/rules/github-readonly.rules` は、`gh auth status`、`gh repo view`、PRのview/list/checks/diff/status、CI実行のview/list/watch、workflowのview/list、issueのview/list/statusを追加確認なしで許可します。
+- リポジトリ指定の有無にかかわらず、上記サブコマンドに適用します。GitHubで認証済みのアカウントがアクセスできる範囲を読み取れます。
+- PRの作成・マージ・クローズ、設定変更、CI再実行などの変更操作は、このルールでは許可しません。既存のネットワーク制限と承認方針は維持します。
+- `gh api` は読み取りにも使用できますが、このルールの対象外です。GET指定の後に別のメソッドを追加でき、GraphQLにも更新操作があるため、コマンドの先頭だけで読み取り専用と保証できません。保護ルール等をAPIで調査するときは承認が残ります。
+- 信頼済みプロジェクトでCodexを再起動すると読み込まれます。現在のセッションや管理ポリシーの権限は、このファイルを編集しても変わりません。他の場所に広い許可ルールがある場合、それを取り消す設定ではありません。
+- 検証例: `codex execpolicy check --pretty --rules .codex/rules/github-readonly.rules -- gh pr checks 21 --required`。変更操作は同じ方法で `gh pr merge 21` 等に置き換え、allowにならないことを確認します。
+
+## GitHubのPR作成・マージの承認
+
+- `.codex/rules/github-pr-write.rules` は、`gh pr create` と `gh pr merge` を追加確認なしで許可します。ユーザーの依頼に含まれるPR作成・マージで、実行環境の承認待ちを減らすための設定です。
+- 自動許可は実行環境の確認を省くもので、依頼されていない公開・マージを行う許可ではありません。作業範囲は引き続きユーザーの指示と `.codex/AGENTS.md` に従います。
+- コマンドの先頭で判定するため、マージオプションや `--repo` の指定先は制限しません。このルールが読み込まれたセッションでは、認証アカウントが操作できる他リポジトリへの同コマンドにも適用されます。
+- この追加ルールは `gh api`、PRクローズ、リポジトリ削除、`git push` を自動許可しません。GitHub API全体を許可すると、読み取りに加えて設定変更・削除にも及ぶため、一括許可は追加していません。
+- CIログ取得は既存の `gh run view --log` が許可対象です。`>` などのシェル構文を組み合わせると、その単純なコマンド許可が適用されず、承認が残る場合があります。
+- プロジェクトが信頼されている状態でCodexを再起動すると読み込まれます。現在のセッションや管理ポリシー、他の設定層にあるルールの効果は、この追加だけでは変わりません。
+- 検証は `codex execpolicy check --rules .codex/rules/github-pr-write.rules -- gh pr merge 22 --merge` 等で行います。実際のPR作成やマージは実行せず、許可判定だけを確認できます。
 
 公式資料: https://learn.chatgpt.com/docs/agent-configuration/rules

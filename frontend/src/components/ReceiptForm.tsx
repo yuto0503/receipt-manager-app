@@ -1,14 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
-import {
-  type Receipt,
-  type ReceiptFormValues,
-} from "@/types/receipt";
-import {
-  parseReceiptInput,
-  type FormErrors,
-} from "@/lib/receipt-input";
+import { type Receipt, type ReceiptFormValues } from "@/types/receipt";
+import { parseReceiptInput, type FormErrors } from "@/lib/receipt-input";
 
 import { saveReceipt, ReceiptClientError } from "@/lib/receipt-client";
 
@@ -55,8 +49,11 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
       return;
     } catch (error) {
       setMissing(error instanceof ReceiptClientError && error.status === 404);
-      setMessage(error instanceof ReceiptClientError ? error.message :
-        "保存結果を確認できませんでした。通信状態と一覧を確認してから再操作してください。");
+      setMessage(
+        error instanceof ReceiptClientError
+          ? error.message
+          : "保存結果を確認できませんでした。通信状態と一覧を確認してから再操作してください。",
+      );
     }
     sending.current = false;
     setPending(false);
@@ -70,7 +67,10 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
         </p>
       )}
       {missing && (
-        <p role="alert">対象のレシートは削除されたか存在しません。<Link href="/receipts">一覧へ戻る</Link></p>
+        <p role="alert">
+          対象のレシートは削除されたか存在しません。
+          <Link href="/receipts">一覧へ戻る</Link>
+        </p>
       )}
       <fieldset disabled={pending || missing} className="space-y-5">
         {(
@@ -118,7 +118,9 @@ export default function ReceiptForm({ receipt }: { receipt?: Receipt }) {
                 aria-describedby={`${key}-hint${errors[key] ? ` ${key}-error` : ""}`}
               />
             )}
-            <p id={`${key}-hint`} className="mt-1 text-sm text-slate-600">{hints[key]}</p>
+            <p id={`${key}-hint`} className="mt-1 text-sm text-slate-600">
+              {hints[key]}
+            </p>
             {errors[key] && (
               <p id={`${key}-error`} className="mt-1 text-sm text-red-700">
                 {errors[key]}

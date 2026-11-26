@@ -24,8 +24,11 @@ export default function DeleteReceipt({ receipt }: { receipt: Receipt }) {
       return;
     } catch (error) {
       setMissing(error instanceof ReceiptClientError && error.status === 404);
-      setMessage(error instanceof ReceiptClientError ? error.message :
-        "削除結果を確認できませんでした。通信状態と一覧を確認してください。");
+      setMessage(
+        error instanceof ReceiptClientError
+          ? error.message
+          : "削除結果を確認できませんでした。通信状態と一覧を確認してください。",
+      );
     }
     sending.current = false;
     setPending(false);
@@ -73,7 +76,12 @@ export default function DeleteReceipt({ receipt }: { receipt: Receipt }) {
           </button>
         </div>
       )}
-      {missing && <p role="alert">対象のレシートはすでに削除されたか存在しません。<Link href="/receipts">一覧へ戻る</Link></p>}
+      {missing && (
+        <p role="alert">
+          対象のレシートはすでに削除されたか存在しません。
+          <Link href="/receipts">一覧へ戻る</Link>
+        </p>
+      )}
       {message && !missing && (
         <p role="alert" className="text-red-700">
           {message}

@@ -1,9 +1,13 @@
 // 実データを操作しないため、必ずテスト専用APIに接続したNext.jsに対して実行する。
 import assert from "node:assert/strict";
+import { artifactPath } from "./artifact-path.mjs";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
-const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL });
+const browser = await chromium.launch({
+  headless: true,
+  channel: process.env.PLAYWRIGHT_CHANNEL,
+});
 const page = await browser.newPage();
 page.setDefaultTimeout(15000);
 page.setDefaultNavigationTimeout(15000);
@@ -17,16 +21,18 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(base);
   await page.waitForURL("**/receipts");
-  assert.equal(await page.locator("h1").innerText(), "レシート一覧");
+  await page
+    .getByRole("heading", { name: "レシート一覧", exact: true })
+    .waitFor();
   for (const [path, heading] of [
     ["/receipts/new", "レシートを登録"],
     ["/receipts/1", "レシート詳細"],
     ["/receipts/1/edit", "レシートを編集"],
   ]) {
     await page.goto(base + path);
-    assert.equal(await page.locator("h1").innerText(), heading);
+    await page.getByRole("heading", { name: heading, exact: true }).waitFor();
     await page.reload();
-    assert.equal(await page.locator("h1").innerText(), heading);
+    await page.getByRole("heading", { name: heading, exact: true }).waitFor();
   }
   await page.getByRole("link", { name: "キャンセル", exact: true }).click();
   await page.waitForURL("**/receipts/1");
@@ -56,9 +62,19 @@ try {
   await page.getByRole("main").getByRole("alert").waitFor();
   assert.equal(await page.locator("#store_name").inputValue(), "APIエラー");
   const htmlMessage = '<img src=x onerror="alert(1)">';
-  await page.route("**/api/receipts/*", route => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ message: htmlMessage }) }));
+  await page.route("**/api/receipts/*", (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ message: htmlMessage }),
+    }),
+  );
   await page.getByRole("button", { name: "保存する" }).click();
-  await page.waitForFunction(expected => document.querySelector('main [role="alert"]')?.textContent === expected, htmlMessage);
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelector('main [role="alert"]')?.textContent === expected,
+    htmlMessage,
+  );
   assert.equal(await page.locator('main [role="alert"] img').count(), 0);
   await page.unroute("**/api/receipts/*");
   await page.locator("#store_name").fill("更新検証店");
@@ -79,15 +95,14 @@ try {
   await page.waitForURL("**/receipts");
   assert.equal(await page.getByRole("link", { name: "更新検証店" }).count(), 0);
   await page.goto(detail);
-  await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
-  assert.equal(await page.locator("h1").innerText(), "対象のレシートが見つかりません");
+  await page
+    .getByRole("heading", { name: "対象のレシートが見つかりません" })
+    .waitFor();
   for (const path of ["/receipts/9999", "/receipts/9999/edit"]) {
     await page.goto(base + path);
-    await page.getByRole("heading", { name: "対象のレシートが見つかりません" }).waitFor();
-    assert.equal(
-      await page.locator("h1").innerText(),
-      "対象のレシートが見つかりません",
-    );
+    await page
+      .getByRole("heading", { name: "対象のレシートが見つかりません" })
+      .waitFor();
   }
   for (const path of ["/receipts/abc", "/receipts/0/edit", "/receipts/-1"]) {
     await page.goto(base + path);
@@ -100,10 +115,9 @@ try {
   for (const path of ["/receipts/500", "/receipts/502"]) {
     await page.goto(base + path);
     await page.getByRole("main").getByRole("alert").waitFor();
-    assert.equal(
-      await page.locator("h1").innerText(),
-      "レシートを表示できません",
-    );
+    await page
+      .getByRole("heading", { name: "レシートを表示できません", exact: true })
+      .waitFor();
   }
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(base + "/receipts/new");
@@ -113,13 +127,13 @@ try {
     ),
   );
   await page.screenshot({
-    path: "/private/tmp/receipt-new-mobile.png",
+    path: artifactPath("receipt-new-mobile.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(base + "/receipts/1");
   await page.screenshot({
-    path: "/private/tmp/receipt-detail-desktop.png",
+    path: artifactPath("receipt-detail-desktop.png"),
     fullPage: true,
   });
   assert.deepEqual(errors, []);

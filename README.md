@@ -109,23 +109,62 @@ docker compose start mysql backend frontend
 
 ## CI
 
-[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・lint・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画の検査を順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境でfrontendの全ステップ成功を確認しました。
+[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・Prettier整形検査・lint・独立した型検査（`next typegen && tsc --noEmit`）・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画検査・ChromiumによるモックAPI向けE2Eを順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。独立したe2eジョブでは、実Go API・専用MySQLを通すブラウザテストも実行します。既存frontend/backendのGitHub上の成功は下記の検証記録を参照してください。新しい実DB e2eジョブのGitHub上での確認は、次回push時に行ってください。
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
-`workflow_dispatch` による手動起動も定義しています。手動起動の動作確認は、このワークフローをデフォルトブランチへ取り込んだ後に行います。
+`workflow_dispatch` による手動起動も定義しています。2026-11-12にPR #17をデフォルトブランチ `develop` へ取り込み、手動起動の成功を確認しました（下記の検証記録を参照）。
 
 変更ファイルのパスによる実行省略は行いません。文書だけを変更したPRでもチェックを報告し、必須チェックが実行されず待機し続ける事態を防ぎます。
 
 同じワークフロー・イベント・ブランチ／PRの古い実行は、新しい更新でキャンセルします。PRを開いたブランチへのpushでは、pushとPRの両イベントで実行されます。イベントをまたいだキャンセルは行わず、変更コミットとマージ予定の状態をそれぞれ確認できる構成です。
 
-ジョブID・表示名は `frontend`・`backend` に固定し、他ワークフローで同名チェックを作りません。両ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトは各15分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
+ジョブID・表示名は `frontend`・`backend`・`e2e` に固定し、他ワークフローで同名チェックを作りません。各ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトはfrontend/backendが15分、e2eが20分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
 
-Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendのGitHub上の実行確認と必須チェックの設定は後続作業です。
+Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendもGitHub上で実行成功を確認済みです。developの必須チェックは下記のマージ保護で設定しています。
 
 検証記録（実装コミット `0cacb7ad`）: [pushの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716208448)、[PRの成功](https://github.com/yuto0503/receipt-manager-app/actions/runs/42716216868)。lint・単体テスト・ビルドの失敗は終了コードでジョブへ伝え、成功扱いにしません。
 
 frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面を利用する際にはAPIの接続設定が必要です。[ローカルでの検証手順](frontend/README.md#ciと同じ検証)を参照してください。
+
+### frontendのformatter・typecheck導入検証（2026-11-24）
+
+- [x] Prettierの整形チェック・ESLint・単体テスト34件が成功。コード・テスト25ファイルの変更は、変更前にPrettierを適用した結果と一致することを確認。
+- [x] 実設定・生成物を含まない一時コピーで `npm ci`、独立した型検査、本番ビルド、一覧ページの動的描画検査が成功。ビルドはサンドボックス内で進行しなかったため、同じ一時コピーで制限外に再実行して成功。
+- [x] 別の一時コピーに未整形コード・型不一致を入れ、各チェックの非0終了と修正後の成功を確認。
+- [x] ワークフローのYAML読み込みと `git diff --check` が成功。`actionlint` は環境にないため未実施。
+- [x] 追加後のGitHub Actionsのfrontendジョブ成功を確認。[PR実行](https://github.com/yuto0503/receipt-manager-app/actions/runs/45718736589)で整形・型検査を含む全ステップ成功。
+
+### frontendのE2E導入検証（2026-11-24）
+
+既存の8本の画面テストを `npm run test:e2e` にまとめ、frontendジョブの本番ビルド後に実行します。対象はChromium → Next.js → 専用モックAPIです。実Go API・MySQLを通す受け入れ検証は含みません。共有状態の競合を避けるため1ワーカーで順番に実行し、失敗はfrontendチェックへ伝えます。[実行手順・レポート](frontend/README.md#ciで実行するe2e)を参照してください。
+
+- [x] 実設定・生成物を含まない一時コピーで `npm ci`、型検査、単体テスト34件、本番ビルド、動的描画検査が成功。整形チェック・lintも成功。
+- [x] macOS / Node.js 24.11.0 / Playwright 1.65.1のChromiumで、`CI=true npm run test:e2e` が8本すべて成功（29.1秒）。HTMLレポートと画像4枚の出力を確認。
+- [x] 既存テストの描画待ち不足と遷移後のレスポンス本文取得で非0終了・失敗ログ保存を確認。テストを修正し、全件成功へ復旧。
+- [x] ワークフローのYAML読み込み、frontend/backendのジョブ名維持、`git diff --check` を確認。`actionlint` は環境にないため未実施。
+- [x] 2026-11-26に現在のコードから一時環境を作り直して再検証。整形・lint・型検査・単体テスト34件・本番ビルド・動的描画検査・E2E全8本（27.9秒）が成功。検証環境と作業中のコード・テスト・設定50ファイルの一致も確認。
+- [x] GitHub ActionsのUbuntu上でモックE2E全8本成功と `frontend-e2e-results` artifact保存を確認。[push](https://github.com/yuto0503/receipt-manager-app/actions/runs/45718728698)・[PR](https://github.com/yuto0503/receipt-manager-app/actions/runs/45718736589)、実装コミット `7e5ed805`。2026-11-27に実行ログと成果物情報を確認。
+
+### 実Go API・MySQLを通すe2eジョブ
+
+`frontend` のモックテストとは別に、`e2e` がジョブ専用MySQL 8.4の空DB `receipt_e2e`、Go API、本番ビルドしたNext.js、Chromiumを準備します。空DBを確認して `backend/migrations/*.up.sql` をファイル名順に適用し、MySQLの認証付きhealth check、APIの `/health` と `/receipts`、フロントの `/receipts` の応答を待ちます。Go単体テスト用の一時テーブルや他ジョブのプロセスは共有しません。
+
+既存のライブラリAPI方式を保ち、`node tests/receipt-acceptance.e2e.mjs 1` で実DBのCRUDを検査します。初期は項目1だけを通常のpush・PRで実行し、Actionsの手動実行で `extended_e2e` を有効にすると1〜8・12を順次実行します。拡張項目では文字数と日付境界・フォーカス・キーボード操作・画面幅・コンソール／通信も検査します。通常CIへの拡張はLinux上の安定性を確認してから行います。モック専用の `/__test/state` は使用せず、障害発生と復旧の管理が必要な `7-server-error`・`7-offline` は通常実行に含めません。
+
+`.github/scripts/run-e2e.sh` がAPIとフロントの起動、各応答の60秒上限、各テストの180秒上限、成功・失敗・中断時の終了処理を担当します。作成したIDだけを削除する既存方針を維持します。API・フロント・MySQL・各テストのログと取得できた画像は `frontend/test-results/acceptance/` に保存し、`e2e-results` artifactとして成功・失敗時とも7日間保存します。ライブラリAPI方式なのでHTMLレポートやtraceを自動生成する設定ではありません。
+
+必須チェックは引き続き `frontend`・`backend` です。新しい `e2e` の失敗はActions上でfailureになりますが、当面マージの必須条件には追加しません。push後にUbuntu上での複数回の成功、成果物保存、実行時間と不安定な失敗の有無を確認してから追加を判断します。既存モックE2Eの成功を、新しい実DBジョブの成功と扱わないでください。[ローカル手順](frontend/README.md#実go-apimysqlのci検証)も参照してください。
+
+導入検証（2026-11-27）:
+
+- [x] 実設定を含まない一時コピーのLinux arm64 / Debian 12 / Node.js 24.22.3 / Go 1.26.3 / MySQL 8.4 / Playwright 1.65.1で、依存とChromiumのインストール、整形・lint・型検査、単体34件、API／フロント本番ビルド、動的描画検査が成功。
+- [x] 専用の空DBへのマイグレーション適用後、CRUDの項目1を確認し、拡張の1〜8・12も全件成功。日本語・日付入力・フォーカス・キーボード操作を検査し、320pxの画像も確認。
+- [x] 一時コンテナ内の意図的なassertion失敗で非0終了・失敗画像・ログ保存を確認。成功時・失敗時・API起動失敗時にサーバーポートが解放されることを確認。プローブ復元後のCRUDと既存モックE2E全8本も成功。DBが0件・対象プロセスが残っていないことを確認し、専用コンテナを停止。
+- [x] `actionlint` 1.7.12、`bash -n`、`git diff --check` が成功。
+- [ ] push後、新しい `e2e` のUbuntu amd64での実行と `e2e-results` artifact保存を確認し、複数回の結果から通常CIへの項目拡張・必須化を判断する。
+
+初回の拡張実行では項目6で編集画面の日付欄待ちが15秒タイムアウトしました。日付ケースのログと、別ブラウザcontextの失敗画面撮影を追加し、項目6単独・全項目の再実行は成功しましたが、初回失敗の原因は未特定です。このため通常CIは項目1から開始し、拡張実行の安定性は継続確認します。Linuxの画面幅検証は実機スマートフォンの検証ではありません。
 
 ### backendの検証
 
@@ -144,9 +183,73 @@ MySQL 8.4はジョブ専用のサービスコンテナです。DBは `receipt_ci
 - `actionlint` 1.7.12、Ruby/PsychのYAML読み込み、`git diff --check` が成功。
 - ローカルのビルドはPATH上のGitの実行形式エラーを避けるため `/usr/bin/git` を使用。CIのコマンドは変更していません。
 
-backendのGitHub Actions上での成功・故意の失敗の検証は未実施です。ローカルの成功と区別して、今後のpush・PR検証で確認します。
+backendのGitHub Actions上での成功に加え、2026-11-13に故意のテスト失敗の検出と修正後の復旧も確認しました。下記の実行記録を参照してください。
+
+### ローカル確認・GitHub上の動作確認（2026-11-12）
+
+検証対象は `84648784`、PR #17のマージコミットは `32f164e5` です。ローカル文書 `local_docs/ci-tasks.md` 第5節は、2026-11-13の失敗・復旧検証を含めて全10項目にチェック済みです。
+
+- [x] 実設定を含まない一時コピーでfrontendの `npm ci`・lint・単体テスト34件・本番ビルド・動的描画検査が成功。Node.js 24.11.0、npm 11.6.1。
+- [x] Goの依存取得・整形検査・静的検査・全テスト・ビルドが成功。専用MySQLで `TestReceiptMySQLIntegration` がSKIPせずPASS。検証用コンテナは停止済み。
+- [x] YAML構文読み込みと `git diff --check` が成功。
+- [x] 同じ対象コミットの[push](https://github.com/yuto0503/receipt-manager-app/actions/runs/42919425262)・[PR](https://github.com/yuto0503/receipt-manager-app/actions/runs/42919628129)のCI成功を確認。
+- [x] [PR #17](https://github.com/yuto0503/receipt-manager-app/pull/17)を `develop` へマージし、[導入後のpush CI](https://github.com/yuto0503/receipt-manager-app/actions/runs/43115419486)の成功を確認。
+- [x] デフォルトブランチへ導入後、[手動起動](https://github.com/yuto0503/receipt-manager-app/actions/runs/43115473320)も成功することを確認する。
+
+`npm ci` は成功しましたが、依存監査は17件（moderate 8、high 8、critical 1）を報告しました。依存の修正は今回の検証に含めていません。
 
 設定仕様: [setup-goのキャッシュ](https://github.com/actions/setup-go#caching-dependency-files-and-build-outputs)、[GitHubのサービスコンテナ](https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers)。
+
+### CIの失敗・復旧検証（2026-11-13）
+
+検証ブランチ `verify/ci-failure-recovery-20261113` と [Draft PR #19](https://github.com/yuto0503/receipt-manager-app/pull/19) を使用しました。CI設定は変更せず、次の2つのテストを一時追加しました。
+
+- frontend: `frontend/tests/ci-failure-probe.test.mjs` の `assert.fail()`。`Unit tests` で `CI_FAILURE_PROBE_FRONTEND` と終了コード1を確認（既存34件は成功、検証用1件だけ失敗）。
+- backend: `backend/internal/handler/ci_failure_probe_test.go` の `TestCIFailureProbe` に `t.Fatal()`。`Unit and MySQL integration tests` で `CI_FAILURE_PROBE_BACKEND` と終了コード1を確認。MySQL統合テスト自体はPASS。
+
+| 対象コミット | push実行 | PR実行 | frontend / backend |
+| --- | --- | --- | --- |
+| 失敗用 `b90037b3` | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323420325) | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323478031) | 両方failure。失敗後のBuildはskip |
+| 修正後 `ad2ac3d7` | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323739081) | [実行記録](https://github.com/yuto0503/receipt-manager-app/actions/runs/43323746277) | 両方success。frontend 34件成功、MySQL統合テストPASS、ビルド成功 |
+
+修正は通常の追加コミットで検証用2ファイルを削除し、同じブランチへ再pushしました。`git diff --exit-code 32f164e551a2676f30ca41993ad94660b9da64f1 HEAD` が終了コード0となり、修正後のファイル内容が検証開始前のdevelopと一致することを確認済みです。PR #19は `closed`・`merged: false` を確認し、失敗用変更はdevelopへ取り込んでいません。CIがテストの非0終了を検出することと、修正コミットで正常に戻ることをそれぞれ検証しました。lint・ビルド自体の故意の失敗やマージ保護ルールの検証は今回の範囲外です。
+
+### CI成功をマージ条件にする（2026-11-18）
+
+GitHubの [develop - required CI](https://github.com/yuto0503/receipt-manager-app/rules/27504634) をActiveで設定しています。CIのYAMLは検査を実行する設定、Rulesetは検査が通るまでマージを禁止する設定です。[設定の記録](.github/rulesets/develop.json) はGitHubへ送信したJSONであり、ファイルの編集だけではGitHubの設定は更新されません。
+
+| 設定 | 内容 |
+| --- | --- |
+| 対象 | `refs/heads/develop` |
+| 必須チェック | `frontend` と `backend`。実行元はGitHub Actions（App ID `15368`）に限定 |
+| 最新変更への追従 | 必須。developが進んだ場合は作業ブランチに取り込み、CIを再実行する |
+| PR | 必須。承認レビューは0件（自分のPRを自分で承認できないため） |
+| バイパス | なし。管理者も適用対象。設定自体を編集する管理権限は別 |
+| 履歴の保護 | force pushとブランチ削除を禁止 |
+
+設定前にREST/GraphQL APIで既存のRulesetとブランチ保護がともに0件、リポジトリがpublic、操作アカウントにadmin権限があることを確認しました。契約プラン名はAPIで取得できませんでしたが、公開リポジトリではFreeでも保護機能が利用でき、実際にActiveルールの作成・取得が成功しています。[GitHubの利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+
+2026-11-18時点の `main` は初期コミット `851d14fa`（READMEのみ）でCIがなく、保護対象外でした。2026-11-24にCIとアプリコードをPRで取り込み、main向けPRとmainのpushで両チェックが成功してから、同様の保護を有効にしました。詳細は下記「mainへのCI導入と保護」を参照してください。チェックが存在しない状態で必須化するとマージが待機し続けるため、CI導入と成功確認を先に行います。
+
+検証には [PR #21](https://github.com/yuto0503/receipt-manager-app/pull/21) を使用し、以前の失敗・復旧コミットを専用ブランチ `verify/merge-protection-20261118` で再利用しました。
+
+| 状態 | push CI | PR CI | PRの判定 |
+| --- | --- | --- | --- |
+| 故意の失敗 `b90037b3` | [両ジョブfailure](https://github.com/yuto0503/receipt-manager-app/actions/runs/44196057775) | [両ジョブfailure](https://github.com/yuto0503/receipt-manager-app/actions/runs/44196078250) | `BLOCKED` |
+| 修正後 `ad2ac3d7` | [両ジョブsuccess](https://github.com/yuto0503/receipt-manager-app/actions/runs/44197246892) | [両ジョブsuccess](https://github.com/yuto0503/receipt-manager-app/actions/runs/44197255253) | `CLEAN` |
+
+PRはDraftではなく、両時点とも競合なし（`mergeable: MERGEABLE`）。`gh pr checks --required` でfrontend/backendが必須として認識されていることと、失敗ログの `CI_FAILURE_PROBE_FRONTEND` / `CI_FAILURE_PROBE_BACKEND` を確認しました。修正後はfrontend 34テストとMySQL統合テストがPASS。マージAPIは呼び出さず、GitHubのマージ可否判定で確認しました。PRはマージせずクローズ済みで、developは `32f164e5` のままです。設定JSONとGitHubから再取得した値の一致、および `git diff --check` も確認しました。
+
+### mainへのCI導入と保護（2026-11-24）
+
+[PR #22](https://github.com/yuto0503/receipt-manager-app/pull/22) で、CI成功済みのdevelop `32f164e5` をmainへ取り込みました。マージコミットは `28a98680ad573598fe7d0e0c403cb463de8e2f9b` です。
+
+- [main向けPRのCI](https://github.com/yuto0503/receipt-manager-app/actions/runs/45283817156) と [mainへのpush CI](https://github.com/yuto0503/receipt-manager-app/actions/runs/45284456249) のfrontend/backendがともに成功。両実行でfrontend 34件、MySQL統合テストのPASS、ビルド成功を確認しました。
+- 成功確認後、[main - required CI](https://github.com/yuto0503/receipt-manager-app/rules/27944544) をActiveで作成しました。対象は `refs/heads/main` のみで、[設定記録](.github/rulesets/main.json) は既存developルールの実際の設定を基にしています。
+- GitHub Actions（App ID `15368`）のfrontend/backend成功、最新mainへの追従、PR経由を必須とし、force pushと削除を禁止しています。レビュー承認は0件、管理者を含むバイパスはありません。
+- GitHubから再取得した設定とJSONの一致、mainの `protected: true`、mainに適用される4ルール、操作アカウントの `current_user_can_bypass: never` を確認しました。既存developルールは変更されていません。main用の故意のCI失敗によるマージ拒否検証は今回再実施していません。
+
+今後は作業PRをdevelopへ取り込み、リリース対象をdevelopからmainへのPRで反映します。両ブランチとも必須CI成功後にマージします。mainが先に進んだ場合はマージ先の変更を取り込み、CIを再実行してください。デフォルトブランチはdevelopです。設定JSONは適用内容の記録であり、編集だけではGitHubに反映されません。
 
 ## 技術スタック
 
