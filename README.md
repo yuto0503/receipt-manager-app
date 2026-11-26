@@ -109,7 +109,7 @@ docker compose start mysql backend frontend
 
 ## CI
 
-[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・Prettier整形検査・lint・独立した型検査（`next typegen && tsc --noEmit`）・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画検査・ChromiumによるモックAPI向けE2Eを順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。2026-11-10に、実設定の.envとAPI接続先がないGitHub環境で当時のfrontendの全ステップ成功を確認しました。追加した検査のGitHub上での確認は、次回push時に行ってください。
+[CIワークフロー](.github/workflows/ci.yml) のfrontendジョブは、依存インストール・Prettier整形検査・lint・独立した型検査（`next typegen && tsc --noEmit`）・単体テスト・本番ビルド（TypeScript検査を含む）・一覧ページの動的描画検査・ChromiumによるモックAPI向けE2Eを順に実行する設定です。backendジョブは専用MySQL 8.4を起動し、Goの整形検査・静的検査・単体／MySQL統合テスト・ビルドを実行する設定です。独立したe2eジョブでは、実Go API・専用MySQLを通すブラウザテストも実行します。既存frontend/backendのGitHub上の成功は下記の検証記録を参照してください。新しい実DB e2eジョブのGitHub上での確認は、次回push時に行ってください。
 
 全ブランチへのpush（タグpushは対象外）と、`develop`・`main` 向けPRの作成・更新・再オープン時に実行します。`pull_request.branches` は変更元ブランチではなく、マージ先ブランチの条件です。
 
@@ -119,7 +119,7 @@ docker compose start mysql backend frontend
 
 同じワークフロー・イベント・ブランチ／PRの古い実行は、新しい更新でキャンセルします。PRを開いたブランチへのpushでは、pushとPRの両イベントで実行されます。イベントをまたいだキャンセルは行わず、変更コミットとマージ予定の状態をそれぞれ確認できる構成です。
 
-ジョブID・表示名は `frontend`・`backend` に固定し、他ワークフローで同名チェックを作りません。両ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトは各15分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
+ジョブID・表示名は `frontend`・`backend`・`e2e` に固定し、他ワークフローで同名チェックを作りません。各ジョブは `ubuntu-24.04` 上で独立して実行し、タイムアウトはfrontend/backendが15分、e2eが20分です。権限は `contents: read` のみに限定し、checkout後に認証情報を保持しません。
 
 Actionは公式リリースの完全なコミットSHAで固定しています。Node.js 24と `backend/go.mod` 指定のGoを準備します。frontendはlockfileをキーにnpmのダウンロードキャッシュを使い、毎回 `npm ci` を実行します。backendは `backend/go.sum` をキーにGoの依存とビルドキャッシュを利用し、毎回 `go mod download` を実行します。backendもGitHub上で実行成功を確認済みです。developの必須チェックは下記のマージ保護で設定しています。
 
@@ -133,7 +133,7 @@ frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面
 - [x] 実設定・生成物を含まない一時コピーで `npm ci`、独立した型検査、本番ビルド、一覧ページの動的描画検査が成功。ビルドはサンドボックス内で進行しなかったため、同じ一時コピーで制限外に再実行して成功。
 - [x] 別の一時コピーに未整形コード・型不一致を入れ、各チェックの非0終了と修正後の成功を確認。
 - [x] ワークフローのYAML読み込みと `git diff --check` が成功。`actionlint` は環境にないため未実施。
-- [ ] 追加後のGitHub Actionsのfrontendジョブ成功を確認（ユーザーによるpush後）。
+- [x] 追加後のGitHub Actionsのfrontendジョブ成功を確認。[PR実行](https://github.com/yuto0503/receipt-manager-app/actions/runs/45718736589)で整形・型検査を含む全ステップ成功。
 
 ### frontendのE2E導入検証（2026-11-24）
 
@@ -144,7 +144,27 @@ frontendの検証は `.env`・Go API・MySQLなしで実行できます。画面
 - [x] 既存テストの描画待ち不足と遷移後のレスポンス本文取得で非0終了・失敗ログ保存を確認。テストを修正し、全件成功へ復旧。
 - [x] ワークフローのYAML読み込み、frontend/backendのジョブ名維持、`git diff --check` を確認。`actionlint` は環境にないため未実施。
 - [x] 2026-11-26に現在のコードから一時環境を作り直して再検証。整形・lint・型検査・単体テスト34件・本番ビルド・動的描画検査・E2E全8本（27.9秒）が成功。検証環境と作業中のコード・テスト・設定50ファイルの一致も確認。
-- [ ] push後、GitHub ActionsのUbuntu上でE2E成功と `frontend-e2e-results` artifact保存を確認。
+- [x] GitHub ActionsのUbuntu上でモックE2E全8本成功と `frontend-e2e-results` artifact保存を確認。[push](https://github.com/yuto0503/receipt-manager-app/actions/runs/45718728698)・[PR](https://github.com/yuto0503/receipt-manager-app/actions/runs/45718736589)、実装コミット `7e5ed805`。2026-11-27に実行ログと成果物情報を確認。
+
+### 実Go API・MySQLを通すe2eジョブ
+
+`frontend` のモックテストとは別に、`e2e` がジョブ専用MySQL 8.4の空DB `receipt_e2e`、Go API、本番ビルドしたNext.js、Chromiumを準備します。空DBを確認して `backend/migrations/*.up.sql` をファイル名順に適用し、MySQLの認証付きhealth check、APIの `/health` と `/receipts`、フロントの `/receipts` の応答を待ちます。Go単体テスト用の一時テーブルや他ジョブのプロセスは共有しません。
+
+既存のライブラリAPI方式を保ち、`node tests/receipt-acceptance.e2e.mjs 1` で実DBのCRUDを検査します。初期は項目1だけを通常のpush・PRで実行し、Actionsの手動実行で `extended_e2e` を有効にすると1〜8・12を順次実行します。拡張項目では文字数と日付境界・フォーカス・キーボード操作・画面幅・コンソール／通信も検査します。通常CIへの拡張はLinux上の安定性を確認してから行います。モック専用の `/__test/state` は使用せず、障害発生と復旧の管理が必要な `7-server-error`・`7-offline` は通常実行に含めません。
+
+`.github/scripts/run-e2e.sh` がAPIとフロントの起動、各応答の60秒上限、各テストの180秒上限、成功・失敗・中断時の終了処理を担当します。作成したIDだけを削除する既存方針を維持します。API・フロント・MySQL・各テストのログと取得できた画像は `frontend/test-results/acceptance/` に保存し、`e2e-results` artifactとして成功・失敗時とも7日間保存します。ライブラリAPI方式なのでHTMLレポートやtraceを自動生成する設定ではありません。
+
+必須チェックは引き続き `frontend`・`backend` です。新しい `e2e` の失敗はActions上でfailureになりますが、当面マージの必須条件には追加しません。push後にUbuntu上での複数回の成功、成果物保存、実行時間と不安定な失敗の有無を確認してから追加を判断します。既存モックE2Eの成功を、新しい実DBジョブの成功と扱わないでください。[ローカル手順](frontend/README.md#実go-apimysqlのci検証)も参照してください。
+
+導入検証（2026-11-27）:
+
+- [x] 実設定を含まない一時コピーのLinux arm64 / Debian 12 / Node.js 24.22.3 / Go 1.26.3 / MySQL 8.4 / Playwright 1.65.1で、依存とChromiumのインストール、整形・lint・型検査、単体34件、API／フロント本番ビルド、動的描画検査が成功。
+- [x] 専用の空DBへのマイグレーション適用後、CRUDの項目1を確認し、拡張の1〜8・12も全件成功。日本語・日付入力・フォーカス・キーボード操作を検査し、320pxの画像も確認。
+- [x] 一時コンテナ内の意図的なassertion失敗で非0終了・失敗画像・ログ保存を確認。成功時・失敗時・API起動失敗時にサーバーポートが解放されることを確認。プローブ復元後のCRUDと既存モックE2E全8本も成功。DBが0件・対象プロセスが残っていないことを確認し、専用コンテナを停止。
+- [x] `actionlint` 1.7.12、`bash -n`、`git diff --check` が成功。
+- [ ] push後、新しい `e2e` のUbuntu amd64での実行と `e2e-results` artifact保存を確認し、複数回の結果から通常CIへの項目拡張・必須化を判断する。
+
+初回の拡張実行では項目6で編集画面の日付欄待ちが15秒タイムアウトしました。日付ケースのログと、別ブラウザcontextの失敗画面撮影を追加し、項目6単独・全項目の再実行は成功しましたが、初回失敗の原因は未特定です。このため通常CIは項目1から開始し、拡張実行の安定性は継続確認します。Linuxの画面幅検証は実機スマートフォンの検証ではありません。
 
 ### backendの検証
 

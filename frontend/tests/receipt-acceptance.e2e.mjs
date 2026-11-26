@@ -1,5 +1,6 @@
 // 専用の空の実DB/APIでのみ実行する。作成したID以外は削除しない。
 import { assert, base, api, setup, fill, create } from "./ui-helpers.mjs";
+import { artifactPath } from "./artifact-path.mjs";
 assert.equal(
   process.env.RECEIPT_ACCEPTANCE_ISOLATED,
   "1",
@@ -270,6 +271,7 @@ try {
           "1000-01-01",
           "9999-12-31",
         ]) {
+          console.log(`Date case: ${timezoneId}, editing=${editing}, ${date}`);
           await target.goto(url);
           await fill(target, { purchase_date: date });
           const id = await save(target);
@@ -478,7 +480,7 @@ try {
           .evaluate((el) => getComputedStyle(el).outlineStyle !== "none"),
       );
       await page.screenshot({
-        path: `/private/tmp/receipt-acceptance-${width}.png`,
+        path: artifactPath(`receipt-acceptance-${width}.png`),
         fullPage: true,
       });
     }
@@ -546,10 +548,29 @@ try {
     ]);
   }
   console.log(`PASS: acceptance ${step} (real Go API / MySQL)`);
+} catch (error) {
+  // Library API scripts do not get the test runner's automatic screenshots.
+  const failurePage =
+    browser
+      .contexts()
+      .flatMap((context) => context.pages())
+      .at(-1) ?? page;
+  console.error("Failure page:", failurePage.url());
+  await failurePage
+    .screenshot({
+      path: artifactPath(`receipt-acceptance-${step}-failure.png`),
+      fullPage: true,
+      timeout: 5000,
+    })
+    .catch((captureError) => console.error("Screenshot failed:", captureError));
+  throw error;
 } finally {
-  for (const id of ids) {
-    const response = await page.request.delete(api + "/receipts/" + id);
-    assert.ok([204, 404].includes(response.status()));
+  try {
+    for (const id of ids) {
+      const response = await page.request.delete(api + "/receipts/" + id);
+      assert.ok([204, 404].includes(response.status()));
+    }
+  } finally {
+    await browser.close();
   }
-  await browser.close();
 }

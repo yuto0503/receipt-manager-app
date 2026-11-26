@@ -8,6 +8,11 @@ on:
     branches: [develop, main]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      extended_e2e:
+        description: 'Run acceptance steps 1–8 and 12 (default: CRUD only)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -78,6 +83,101 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
           retention-days: 7
+
+  # Observe this independent check before adding it to branch rulesets.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      DB_USER: root
+      DB_PASSWORD: ci-e2e-password
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_NAME: receipt_e2e
+      SERVER_API_BASE_URL: http://127.0.0.1:8080
+      RECEIPT_UI_TEST_URL: http://127.0.0.1:3100
+      RECEIPT_TEST_API_URL: http://127.0.0.1:8080
+      RECEIPT_ACCEPTANCE_ISOLATED: '1'
+      E2E_STEPS: ${{ github.event_name == 'workflow_dispatch' && inputs.extended_e2e && '1 2 3 4 5 6 7 8 12' || '1' }}
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: receipt_e2e
+          MYSQL_ROOT_PASSWORD: ci-e2e-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysql --protocol=TCP -h 127.0.0.1 -uroot -pci-e2e-password receipt_e2e -e 'SELECT 1'"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=24
+          --health-start-period=30s
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Migrate empty E2E database
+        env:
+          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        run: |
+          mkdir -p frontend/test-results/acceptance
+          # A fresh service DB uses real tables, unlike Go's temporary test tables.
+          tables=$(docker exec -e MYSQL_PWD="$DB_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot "$DB_NAME" --batch --skip-column-names -e 'SHOW TABLES')
+          test -z "$tables"
+          for migration in backend/migrations/*.up.sql; do
+            echo "Applying $migration"
+            docker exec -i -e MYSQL_PWD="$DB_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot "$DB_NAME" < "$migration"
+          done
+      - name: Build API
+        working-directory: backend
+        run: go build -o "$RUNNER_TEMP/receipt-e2e-api" ./cmd/api
+      - name: Build frontend
+        working-directory: frontend
+        # Exercise the same build-without-API contract as the frontend job.
+        run: env -u SERVER_API_BASE_URL npm run build
+      - name: Real API and MySQL browser tests
+        env:
+          E2E_API_BINARY: ${{ runner.temp }}/receipt-e2e-api
+        run: bash .github/scripts/run-e2e.sh
+      - name: Collect MySQL log
+        if: ${{ always() }}
+        env:
+          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        run: |
+          mkdir -p frontend/test-results/acceptance
+          docker logs "$MYSQL_CONTAINER" > frontend/test-results/acceptance/mysql.log 2>&1
+      - name: Upload real E2E results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results
+          path: frontend/test-results/acceptance/
+          retention-days: 7
+          if-no-files-found: warn
 
   backend:
     name: backend
